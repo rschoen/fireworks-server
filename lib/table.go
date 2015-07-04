@@ -1,4 +1,5 @@
 package lib
+
 // game.go was getting big, so I separated some stuff into here
 
 import (
@@ -7,9 +8,9 @@ import (
 
 func (g *Game) PopulateDeck() {
 	i := 0
-	for number,count := range numbers {
-		for _,color := range colors {
-			for j:=0; j < count; j++ {
+	for number, count := range numbers {
+		for _, color := range colors {
+			for j := 0; j < count; j++ {
 				g.deck[i].Color = color
 				g.deck[i].Number = number
 				i++
@@ -26,7 +27,7 @@ func (g *Game) DrawCard() Card {
 }
 
 func (g *Game) PlayCard(c Card) bool {
-	for index,count := range g.piles {
+	for index, count := range g.piles {
 		if colors[index] == c.Color {
 			if count+1 == c.Number {
 				// good play!
@@ -41,7 +42,7 @@ func (g *Game) PlayCard(c Card) bool {
 }
 
 func (g *Game) PilesComplete() bool {
-	for _,count := range g.piles {
+	for _, count := range g.piles {
 		if count != len(numbers)-1 {
 			return false
 		}
