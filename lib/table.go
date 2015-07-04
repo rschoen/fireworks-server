@@ -3,7 +3,7 @@ package lib
 // game.go was getting big, so I separated some stuff into here
 
 import (
-	rand "math/rand"
+	"math/rand"
 )
 
 func (g *Game) PopulateDeck() {

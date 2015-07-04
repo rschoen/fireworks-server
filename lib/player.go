@@ -6,7 +6,7 @@ import (
 )
 
 type Player struct {
-	ID    string
+	id    string
 	cards []Card
 }
 
@@ -20,9 +20,9 @@ func (p *Player) ReceiveHint(i int, infoType int) {
 	var color = card.Color
 	for _, potentialMatch := range p.cards {
 		if infoType == infoNumber && potentialMatch.Number == number {
-			potentialMatch.NumberKnown = true
+			potentialMatch.RevealedNumber = number
 		} else if infoType == infoColor && potentialMatch.Color == color {
-			potentialMatch.ColorKnown = true
+			potentialMatch.RevealedColor = color
 		}
 	}
 }
@@ -49,4 +49,14 @@ func (p *Player) RemoveCard(i int) Card {
 	var removedCard = p.cards[i]
 	p.cards = append(p.cards[:i], p.cards[i+1:]...)
 	return removedCard
+}
+
+func (g *Game) GetPlayerByID(id string) Player {
+	var p Player
+	for _, player := range g.players {
+		if player.id == id {
+			return player
+		}
+	}
+	return p
 }
