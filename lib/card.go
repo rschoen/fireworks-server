@@ -1,10 +1,8 @@
 package lib
 
 type Card struct {
-	number		int
-	color		string
-	numberKnown	bool
-	colorKnown	bool
+	Number		int
+	Color		string
+	NumberKnown	bool
+	ColorKnown	bool
 }
-
-	
