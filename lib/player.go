@@ -6,8 +6,8 @@ import (
 )
 
 type Player struct {
-	playerID	string
-	cards		[]Card
+	ID		string
+	cards	[]Card
 }
 
 func (p *Player) Initialize(maxCards int) {
@@ -27,26 +27,26 @@ func (p *Player) ReceiveHint(i int, infoType int) {
 	}
 }
 
-func (p *Player) GetCard(i int) *Card {
+func (p *Player) GetCard(i int) Card {
 	if(i >= len(p.cards)) {
 		fmt.Printf("Referenced a non-existent card in a player's hand.")
 		os.Exit(1)
 	}
-	return &p.cards[i]
+	return p.cards[i]
 }
 
-func (p *Player) AddCard(c *Card) {
+func (p *Player) AddCard(c Card) {
 	if(len(p.cards) == cap(p.cards)) {
 		fmt.Printf("Attempted to add a card beyond hand capacity.")
 	}
-	p.cards = append(p.cards, *c)
+	p.cards = append(p.cards, c)
 }
 
-func (p *Player) RemoveCard(i int) *Card {
+func (p *Player) RemoveCard(i int) Card {
 	if(i >= len(p.cards)) {
 		fmt.Printf("Attempted to remove a non-existent card.")
 	}
 	var removedCard = p.cards[i]
 	p.cards = append(p.cards[:i], p.cards[i+1:]...)
-	return &removedCard
+	return removedCard
 }
