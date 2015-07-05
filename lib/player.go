@@ -51,11 +51,14 @@ func (p *Player) RemoveCard(i int) Card {
 	return removedCard
 }
 
-func (g *Game) GetPlayerByID(id string) Player {
-	var p Player
+func (g *Game) GetPlayerByID(id string) *Player {
+	p := new(Player)
+	if g.players == nil {
+		return p
+	}
 	for _, player := range g.players {
 		if player.id == id {
-			return player
+			return &player
 		}
 	}
 	return p

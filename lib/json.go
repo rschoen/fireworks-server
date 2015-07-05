@@ -31,7 +31,7 @@ func DecodeMove(s string) (Message, bool) {
 	var m Message
 	err := json.Unmarshal(b, &m)
 	if err != nil {
-		fmt.Printf("Error decoding move from JSON string.")
+		fmt.Printf("Error decoding move from JSON string.\nGot message: %s\nError:%s\n\n", err, s)
 		return Message{}, false
 	}
 

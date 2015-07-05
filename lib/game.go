@@ -50,6 +50,7 @@ func (g *Game) Initialize() bool {
 	// start with no players
 	g.players = make([]Player, 0, len(cardsInHand)-1)
 	g.Initialized = true
+	fmt.Println("Game initialized.\n")
 	return true
 }
 
@@ -117,7 +118,7 @@ func (g *Game) ProcessMove(m Message) bool {
 		return false
 	}
 	p := g.GetPlayerByID(m.Player)
-	if &p == nil {
+	if p == nil {
 		fmt.Printf("Attempting to process a move for a nonexistent player.")
 		return false
 	}
@@ -154,7 +155,7 @@ func (g *Game) ProcessMove(m Message) bool {
 			return false
 		}
 		hintReceiver := g.GetPlayerByID(m.HintPlayer)
-		if &hintReceiver == nil {
+		if hintReceiver == nil {
 			fmt.Printf("Attempting to give hint to a nonexistent player.")
 			return false
 		}
