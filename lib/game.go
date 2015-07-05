@@ -8,49 +8,49 @@ import (
 
 type Game struct {
 	GameID      string
-	players     []Player
+	Players     []Player
 	Initialized bool
 	Started     bool
 
-	hints         int
-	bombs         int
-	deck          []Card
-	discard       []Card
-	piles         []int
-	currentPlayer int
-	startingTime  int
-	finished      bool
-	won           bool
-	turnsLeft     int
+	Hints         int
+	Bombs         int
+	Deck          []Card
+	Discard       []Card
+	Piles         []int
+	CurrentPlayer int
+	StartingTime  int
+	Finished      bool
+	Won           bool
+	TurnsLeft     int
 }
 
 func (g *Game) Initialize() bool {
-	if g.finished {
+	if g.Finished {
 		fmt.Printf("Attempting to initialize game after game has ended.")
 		return false
 	}
 
-	// figure out how many cards are in the deck
+	// figure out how many cards are in the Deck
 	maxCards := 0
 	for _, count := range numbers {
 		maxCards += count * len(colors)
 	}
 
-	// populate the deck, discard, and piles
-	g.deck = make([]Card, maxCards, maxCards)
+	// populate the Deck, Discard, and Piles
+	g.Deck = make([]Card, maxCards, maxCards)
 	g.PopulateDeck()
-	g.discard = make([]Card, 0, maxCards)
-	g.piles = make([]int, len(colors), len(colors))
+	g.Discard = make([]Card, 0, maxCards)
+	g.Piles = make([]int, len(colors), len(colors))
 
 	// set starting values
-	g.hints = startingHints
-	g.bombs = startingBombs
-	g.turnsLeft = -1
+	g.Hints = startingHints
+	g.Bombs = startingBombs
+	g.TurnsLeft = -1
 
-	// start with no players
-	g.players = make([]Player, 0, len(cardsInHand)-1)
+	// start with no Players
+	g.Players = make([]Player, 0, len(cardsInHand)-1)
 	g.Initialized = true
-	fmt.Println("Game initialized.\n")
+	fmt.Printf("Game '%s' initialized.\n", g.GameID)
 	return true
 }
 
@@ -63,16 +63,17 @@ func (g *Game) AddPlayer(id string) bool {
 		fmt.Printf("Attempting to add player after game has Started.")
 		return false
 	}
-	if g.finished {
-		fmt.Printf("Attempting to add players after game has ended.")
+	if g.Finished {
+		fmt.Printf("Attempting to add Players after game has ended.")
 		return false
 	}
-	if len(g.players) >= len(cardsInHand)-1 {
+	if len(g.Players) >= len(cardsInHand)-1 {
 		fmt.Printf("Attempted to add a player to a full game.")
 		return false
 	}
 
-	g.players = append(g.players, Player{id: id})
+	g.Players = append(g.Players, Player{ID: id})
+	fmt.Printf("Player '%s' joined game '%s'.\n", id, g.GameID)
 	return true
 }
 
@@ -85,26 +86,27 @@ func (g *Game) Start() {
 		fmt.Printf("Attempting to start a game already in progress.")
 		os.Exit(1)
 	}
-	if g.finished {
+	if g.Finished {
 		fmt.Printf("Attempting to start a game after it has ended.")
 		os.Exit(1)
 	}
-	numPlayers := len(g.players)
+	numPlayers := len(g.Players)
 	if numPlayers >= len(cardsInHand) || cardsInHand[numPlayers] == 0 {
-		fmt.Printf("Attempted to start game with invalid number of players.")
+		fmt.Printf("Attempted to start game with invalid number of Players.")
 		os.Exit(1)
 	}
 
 	// create hands
-	for _, player := range g.players {
-		player.Initialize(cardsInHand[numPlayers])
+	for index, _ := range g.Players {
+		g.Players[index].Initialize(cardsInHand[numPlayers])
 		for i := 0; i < cardsInHand[numPlayers]; i++ {
-			player.AddCard(g.DrawCard())
+			fmt.Printf("Adding card to player's hand.")
+			g.Players[index].AddCard(g.DrawCard())
 		}
 	}
 
 	// let's do it
-	g.currentPlayer = rand.Intn(numPlayers)
+	g.CurrentPlayer = rand.Intn(numPlayers)
 	g.Started = true
 }
 
@@ -113,8 +115,8 @@ func (g *Game) ProcessMove(m Message) bool {
 		fmt.Printf("Attempting to process move for a game that hasn't Started yet.")
 		os.Exit(1)
 	}
-	if g.finished {
-		fmt.Printf("Attempting to process a move for a finished game.")
+	if g.Finished {
+		fmt.Printf("Attempting to process a move for a Finished game.")
 		return false
 	}
 	p := g.GetPlayerByID(m.Player)
@@ -137,21 +139,21 @@ func (g *Game) ProcessMove(m Message) bool {
 			}
 		} else {
 			// play was unsuccessful :(
-			g.bombs--
-			if g.bombs == 0 {
+			g.Bombs--
+			if g.Bombs == 0 {
 				g.Lose()
 			}
-			g.discard = append(g.discard, card)
+			g.Discard = append(g.Discard, card)
 		}
 	} else if m.MoveType == MoveDiscard {
 		p.RemoveCard(m.CardIndex)
-		g.discard = append(g.discard, card)
-		g.hints++
-		if g.hints > maxHints {
-			g.hints = maxHints
+		g.Discard = append(g.Discard, card)
+		g.Hints++
+		if g.Hints > maxHints {
+			g.Hints = maxHints
 		}
 	} else if m.MoveType == MoveHint {
-		if g.hints <= 0 {
+		if g.Hints <= 0 {
 			return false
 		}
 		hintReceiver := g.GetPlayerByID(m.HintPlayer)
@@ -160,22 +162,22 @@ func (g *Game) ProcessMove(m Message) bool {
 			return false
 		}
 		hintReceiver.ReceiveHint(m.HintCard, m.HintInfoType)
-		g.hints--
+		g.Hints--
 	} else {
 		fmt.Printf("Attempting to process unknown move type.")
 		return false
 	}
 
 	if m.MoveType == MovePlay || m.MoveType == MoveDiscard {
-		if len(g.deck) > 0 {
+		if len(g.Deck) > 0 {
 			p.AddCard(g.DrawCard())
-		} else if g.turnsLeft == -1 {
-			// deck is empty, start the countdown
-			g.turnsLeft = len(g.players)
+		} else if g.TurnsLeft == -1 {
+			// Deck is empty, start the countdown
+			g.TurnsLeft = len(g.Players)
 		}
 	}
 
-	if g.turnsLeft == 0 {
+	if g.TurnsLeft == 0 {
 		g.Lose()
 	}
 
@@ -189,28 +191,33 @@ func (g *Game) CreateState(playerid string) Game {
 	gCopy := Game{}
 	gCopy = *g
 
-	// clear the deck (could be used to determine your hand)
-	gCopy.deck = make([]Card, 0, 0)
+	// clear the Deck (could be used to determine your hand)
+	gCopy.Deck = make([]Card, 0, 0)
 
 	// clear your hand, except for revealed info
-	for _, player := range gCopy.players {
-		if p.id == player.id {
-			for _, card := range player.cards {
+	newPlayers := make([]Player, len(g.Players), len(g.Players))
+	for playerIndex, player := range gCopy.Players {
+		if p.ID == player.ID {
+			newHand := make([]Card, len(player.Cards), len(player.Cards))
+			for cardIndex, card := range player.Cards {
 				card.Color = ""
 				card.Number = 0
+				newHand[cardIndex] = card
 			}
+			player.Cards = newHand
 		}
+		newPlayers[playerIndex] = player
 	}
-
+	gCopy.Players = newPlayers
 	return gCopy
 }
 
 func (g *Game) Win() {
-	g.finished = true
-	g.won = true
+	g.Finished = true
+	g.Won = true
 }
 
 func (g *Game) Lose() {
-	g.finished = true
-	g.won = false
+	g.Finished = true
+	g.Won = false
 }

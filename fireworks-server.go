@@ -7,10 +7,15 @@ import (
 )
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path[1:5] != "api/" {
+		http.FileServer(http.Dir(lib.ClientDirectory)).ServeHTTP(w, r)
+		return
+	}
 
 	m, ok := lib.DecodeMove(r.PostFormValue("data"))
 	if !ok {
-		fmt.Printf("Malformed message, discarding.")
+		fmt.Printf("Malformed message, Discarding.")
+		fmt.Fprintf(w, "Error: malformed JSON message.")
 		return
 	}
 	var game *lib.Game
@@ -20,7 +25,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if r.URL.Path[1:] == "join" {
+	if r.URL.Path[5:] == "join" {
 		// create game if it doesn't exist
 		if game == nil {
 			game = new(lib.Game)
@@ -35,7 +40,11 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		// add player if it doesn't exist
 		if player == nil {
 			game.AddPlayer(m.Player)
+		} else {
+			fmt.Println(player)
 		}
+
+		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
 	}
 
@@ -43,25 +52,31 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if game == nil {
 		fmt.Printf("Attempting to make a move on a nonexistent game.")
+		fmt.Fprintf(w, "Error: Attempted to make a move on nonexistent game.")
 		return
 	}
 
 	if player == nil {
 		fmt.Printf("Attempting to make a move with nonexistent player.")
+		fmt.Fprintf(w, "Error: Attempting to make a move with nonexistent player.")
 		return
 	}
 
-	if r.URL.Path[1:] == "start" {
+	if r.URL.Path[5:] == "start" {
 		if game.Started {
 			fmt.Printf("Attempting to start already started game.")
+			fmt.Fprintf(w, "Error: Attempting to start already started game.")
 			return
 		}
 		game.Start()
+		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
 	}
 
-	if r.URL.Path[1:] == "move" {
+	if r.URL.Path[5:] == "move" {
 		game.ProcessMove(m)
+		fmt.Printf("Global game state: %#v\n\n", *game)
+		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
 	}
 
@@ -81,6 +96,6 @@ func main() {
 
 	// listen for connections
 	http.HandleFunc("/", s.handler)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+lib.Port, nil)
 
 }

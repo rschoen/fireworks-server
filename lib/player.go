@@ -6,59 +6,59 @@ import (
 )
 
 type Player struct {
-	id    string
-	cards []Card
+	ID    string
+	Cards []Card
 }
 
 func (p *Player) Initialize(maxCards int) {
-	p.cards = make([]Card, 0, maxCards)
+	p.Cards = make([]Card, 0, maxCards)
 }
 
 func (p *Player) ReceiveHint(i int, infoType int) {
 	var card = p.GetCard(i)
 	var number = card.Number
 	var color = card.Color
-	for _, potentialMatch := range p.cards {
-		if infoType == infoNumber && potentialMatch.Number == number {
-			potentialMatch.RevealedNumber = number
-		} else if infoType == infoColor && potentialMatch.Color == color {
-			potentialMatch.RevealedColor = color
+	for index, _ := range p.Cards {
+		if infoType == infoNumber && p.Cards[index].Number == number {
+			p.Cards[index].RevealedNumber = number
+		} else if infoType == infoColor && p.Cards[index].Color == color {
+			p.Cards[index].RevealedColor = color
 		}
 	}
 }
 
 func (p *Player) GetCard(i int) Card {
-	if i >= len(p.cards) {
+	if i >= len(p.Cards) {
 		fmt.Printf("Referenced a non-existent card in a player's hand.")
 		os.Exit(1)
 	}
-	return p.cards[i]
+	return p.Cards[i]
 }
 
 func (p *Player) AddCard(c Card) {
-	if len(p.cards) == cap(p.cards) {
+	if len(p.Cards) == cap(p.Cards) {
 		fmt.Printf("Attempted to add a card beyond hand capacity.")
 	}
-	p.cards = append(p.cards, c)
+	p.Cards = append(p.Cards, c)
 }
 
 func (p *Player) RemoveCard(i int) Card {
-	if i >= len(p.cards) {
+	if i >= len(p.Cards) {
 		fmt.Printf("Attempted to remove a non-existent card.")
 	}
-	var removedCard = p.cards[i]
-	p.cards = append(p.cards[:i], p.cards[i+1:]...)
+	var removedCard = p.Cards[i]
+	p.Cards = append(p.Cards[:i], p.Cards[i+1:]...)
 	return removedCard
 }
 
 func (g *Game) GetPlayerByID(id string) *Player {
-	p := new(Player)
-	if g.players == nil {
+	var p *Player
+	if g.Players == nil {
 		return p
 	}
-	for _, player := range g.players {
-		if player.id == id {
-			return &player
+	for index, _ := range g.Players {
+		if g.Players[index].ID == id {
+			return &g.Players[index]
 		}
 	}
 	return p
