@@ -113,7 +113,7 @@ func (g *Game) Start() {
 func (g *Game) ProcessMove(m Message) bool {
 	if !g.Started {
 		fmt.Printf("Attempting to process move for a game that hasn't Started yet.")
-		os.Exit(1)
+		return false
 	}
 	if g.Finished {
 		fmt.Printf("Attempting to process a move for a Finished game.")
@@ -161,7 +161,7 @@ func (g *Game) ProcessMove(m Message) bool {
 			fmt.Printf("Attempting to give hint to a nonexistent player.")
 			return false
 		}
-		hintReceiver.ReceiveHint(m.HintCard, m.HintInfoType)
+		hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
 		g.Hints--
 	} else {
 		fmt.Printf("Attempting to process unknown move type.")

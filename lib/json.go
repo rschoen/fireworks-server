@@ -12,7 +12,6 @@ type Message struct {
 	MoveType     int
 	CardIndex    int
 	HintPlayer   string
-	HintCard     int
 	HintInfoType int
 }
 
