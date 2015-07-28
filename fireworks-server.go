@@ -6,12 +6,13 @@ import (
 	"net/http"
 )
 
+
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path[1:5] != "api/" {
+	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
 		http.FileServer(http.Dir(lib.ClientDirectory)).ServeHTTP(w, r)
 		return
 	}
-
+	
 	m, ok := lib.DecodeMove(r.PostFormValue("data"))
 	if !ok {
 		fmt.Printf("Malformed message, Discarding.")
@@ -43,7 +44,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			fmt.Println(player)
 		}
-
+		
 		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
 	}
@@ -52,20 +53,20 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if game == nil {
 		fmt.Printf("Attempting to make a move on a nonexistent game.")
-		fmt.Fprintf(w, "Error: Attempted to make a move on nonexistent game.")
+		fmt.Fprintf(w, "Error: Attempted to make a move on nonexistent game.",)
 		return
 	}
 
 	if player == nil {
 		fmt.Printf("Attempting to make a move with nonexistent player.")
-		fmt.Fprintf(w, "Error: Attempting to make a move with nonexistent player.")
+		fmt.Fprintf(w, "Error: Attempting to make a move with nonexistent player.",)
 		return
 	}
 
 	if r.URL.Path[5:] == "start" {
 		if game.Started {
 			fmt.Printf("Attempting to start already started game.")
-			fmt.Fprintf(w, "Error: Attempting to start already started game.")
+			fmt.Fprintf(w, "Error: Attempting to start already started game.",)
 			return
 		}
 		game.Start()
@@ -78,13 +79,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Global game state: %#v\n\n", *game)
 		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
-	}
-
-	fmt.Fprintf(w, "done")
+	}	
+	
+    fmt.Fprintf(w, "done")
 }
 
+
 type Server struct {
-	games []*lib.Game
+	games   []*lib.Game
 }
 
 func main() {
@@ -96,6 +98,7 @@ func main() {
 
 	// listen for connections
 	http.HandleFunc("/", s.handler)
-	http.ListenAndServe(":"+lib.Port, nil)
+    http.ListenAndServe(":"+lib.Port, nil)
 
 }
+
