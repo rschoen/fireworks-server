@@ -48,6 +48,11 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
 	}
+	
+	if r.URL.Path[5:] == "status" {
+		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
+		return
+	}
 
 	player := game.GetPlayerByID(m.Player)
 
