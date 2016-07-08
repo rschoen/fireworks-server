@@ -22,6 +22,7 @@ type Game struct {
 	Finished      bool
 	Won           bool
 	TurnsLeft     int
+	CardsLeft     int
 }
 
 func (g *Game) Initialize() bool {
@@ -192,6 +193,7 @@ func (g *Game) CreateState(playerid string) Game {
 	gCopy = *g
 
 	// clear the Deck (could be used to determine your hand)
+	gCopy.CardsLeft = len(gCopy.Deck);
 	gCopy.Deck = make([]Card, 0, 0)
 
 	// clear your hand, except for revealed info

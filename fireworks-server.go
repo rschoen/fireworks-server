@@ -50,6 +50,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 	
 	if r.URL.Path[5:] == "status" {
+		if game == nil {
+			fmt.Printf("Discarding status check for nonexistent game.")
+			return
+		}
 		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
 		return
 	}
