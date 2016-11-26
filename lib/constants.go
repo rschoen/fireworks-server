@@ -17,4 +17,4 @@ var cardsInHand = [...]int{0, 0, 5, 5, 4, 4} // this represents the COUNTS for e
 
 const MaxConcurrentGames = 100
 const ClientDirectory = "/var/www/"
-const Port = "8080"
+const Port = 8080

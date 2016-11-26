@@ -1,10 +1,13 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/rschoen/fireworks-server/lib"
+	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -106,10 +109,12 @@ func main() {
 	// initialize server
 	s := Server{}
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
-
+	
 	// listen for connections
+	var port = flag.Int("port", lib.Port, "Port to listen for connections from client")
+	flag.Parse();
 	http.HandleFunc("/", s.handler)
-    http.ListenAndServe(":"+lib.Port, nil)
+    log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 
 }
 
