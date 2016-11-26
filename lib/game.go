@@ -162,7 +162,7 @@ func (g *Game) ProcessMove(m Message) bool {
 			fmt.Printf("Attempting to give hint to a nonexistent player.")
 			return false
 		}
-		hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
+		hintReceiver.ReceiveHint(m.HintInfoType, m.HintNumber, m.HintColor)
 		g.Hints--
 	} else {
 		fmt.Printf("Attempting to process unknown move type.")

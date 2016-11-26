@@ -9,10 +9,12 @@ import (
 type Message struct {
 	Game         string
 	Player       string
-	MoveType     int
 	CardIndex    int
+	MoveType     int
 	HintPlayer   string
 	HintInfoType int
+	HintNumber   int
+	HintColor    string
 }
 
 func EncodeGame(g Game) string {
