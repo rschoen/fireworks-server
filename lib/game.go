@@ -141,6 +141,12 @@ func (g *Game) ProcessMove(m Message) bool {
 
 		if g.PlayCard(card) {
 			// play was successful!
+			if card.Number == 5 {
+				g.Hints++
+				if g.Hints > maxHints {
+					g.Hints = maxHints
+				}
+			}
 			if g.PilesComplete() {
 				g.Win()
 			}
