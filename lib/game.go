@@ -17,7 +17,8 @@ type Game struct {
 	Deck          []Card
 	Discard       []Card
 	Piles         []int
-	CurrentPlayer int
+	CurrentPlayerIndex int
+	CurrentPlayer string
 	StartingTime  int
 	Finished      bool
 	Won           bool
@@ -107,7 +108,8 @@ func (g *Game) Start() {
 	}
 
 	// let's do it
-	g.CurrentPlayer = rand.Intn(numPlayers)
+	g.CurrentPlayerIndex = rand.Intn(numPlayers)
+	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
 	g.Started = true
 }
 
@@ -118,6 +120,10 @@ func (g *Game) ProcessMove(m Message) bool {
 	}
 	if g.Finished {
 		fmt.Printf("Attempting to process a move for a Finished game.")
+		return false
+	}
+	if m.Player != g.CurrentPlayer {
+		fmt.Printf("Attempting to process a move for out-of-turn player.")
 		return false
 	}
 	p := g.GetPlayerByID(m.Player)
@@ -162,7 +168,7 @@ func (g *Game) ProcessMove(m Message) bool {
 			fmt.Printf("Attempting to give hint to a nonexistent player.")
 			return false
 		}
-		hintReceiver.ReceiveHint(m.HintInfoType, m.HintNumber, m.HintColor)
+		hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
 		g.Hints--
 	} else {
 		fmt.Printf("Attempting to process unknown move type.")
@@ -175,8 +181,12 @@ func (g *Game) ProcessMove(m Message) bool {
 		} else if g.TurnsLeft == -1 {
 			// Deck is empty, start the countdown
 			g.TurnsLeft = len(g.Players)
-		}
+		}	
 	}
+	
+	g.CurrentPlayerIndex = (g.CurrentPlayerIndex+1) % len(g.Players);
+	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID;
+	
 
 	if g.TurnsLeft == 0 {
 		g.Lose()

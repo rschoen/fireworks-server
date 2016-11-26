@@ -14,7 +14,10 @@ func (p *Player) Initialize(maxCards int) {
 	p.Cards = make([]Card, 0, maxCards)
 }
 
-func (p *Player) ReceiveHint(infoType int, number int, color string) {
+func (p *Player) ReceiveHint(i int, infoType int) {
+	var card = p.GetCard(i)
+	var number = card.Number
+	var color = card.Color
 	for index, _ := range p.Cards {
 		if infoType == infoNumber && p.Cards[index].Number == number {
 			p.Cards[index].RevealedNumber = number
