@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/rschoen/fireworks-server/lib"
+	"math/rand"
 	"net/http"
+	"time"
 )
 
 
@@ -99,7 +101,7 @@ type Server struct {
 }
 
 func main() {
-	// check to make sure no other server is running
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	// initialize server
 	s := Server{}
