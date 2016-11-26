@@ -6,8 +6,6 @@ const infoColor = 2
 const MovePlay = 1
 const MoveDiscard = 2
 const MoveHint = 3
-const MoveJoin = 4
-const MoveStart = 5
 
 var colors = [...]string{"red", "green", "blue", "yellow", "white"}
 var numbers = [...]int{0, 3, 2, 2, 2, 1} // this represents the COUNTS of each number (0 added for simplicity)
