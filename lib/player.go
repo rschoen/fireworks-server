@@ -20,9 +20,9 @@ func (p *Player) ReceiveHint(i int, infoType int) {
 	var color = card.Color
 	for index, _ := range p.Cards {
 		if infoType == infoNumber && p.Cards[index].Number == number {
-			p.Cards[index].RevealedNumber = number
+			p.Cards[index].KnownNumber = number
 		} else if infoType == infoColor && p.Cards[index].Color == color {
-			p.Cards[index].RevealedColor = color
+			p.Cards[index].KnownColor = color
 		}
 	}
 }
