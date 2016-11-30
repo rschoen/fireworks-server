@@ -13,8 +13,12 @@ import (
 
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	
 	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
-		http.FileServer(http.Dir(lib.ClientDirectory)).ServeHTTP(w, r)
+		if s.httpServer {
+			http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
+		}
 		return
 	}
 	
@@ -101,6 +105,8 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 type Server struct {
 	games   []*lib.Game
+	httpServer	bool
+	clientDirectory	string
 }
 
 func main() {
@@ -111,7 +117,9 @@ func main() {
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
 	
 	// listen for connections
-	var port = flag.Int("port", lib.Port, "Port to listen for connections from client")
+	s.httpServer = *flag.Bool("http-server", true, "Whether to also serve HTTP responses outside API calls.")
+	s.clientDirectory = *flag.String("client-directory", lib.ClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
+	var port = flag.Int("port", lib.Port, "Port to listen for connections from client.")
 	flag.Parse();
 	http.HandleFunc("/", s.handler)
     log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
