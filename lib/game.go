@@ -12,18 +12,18 @@ type Game struct {
 	Initialized bool
 	Started     bool
 
-	Hints         int
-	Bombs         int
-	Deck          []Card
-	Discard       []Card
-	Piles         []int
+	Hints              int
+	Bombs              int
+	Deck               []Card
+	Discard            []Card
+	Piles              []int
 	CurrentPlayerIndex int
-	CurrentPlayer string
-	StartingTime  int
-	Finished      bool
-	Won           bool
-	TurnsLeft     int
-	CardsLeft     int
+	CurrentPlayer      string
+	StartingTime       int
+	Finished           bool
+	Won                bool
+	TurnsLeft          int
+	CardsLeft          int
 }
 
 func (g *Game) Initialize() bool {
@@ -187,12 +187,11 @@ func (g *Game) ProcessMove(m Message) bool {
 		} else if g.TurnsLeft == -1 {
 			// Deck is empty, start the countdown
 			g.TurnsLeft = len(g.Players)
-		}	
+		}
 	}
-	
-	g.CurrentPlayerIndex = (g.CurrentPlayerIndex+1) % len(g.Players);
-	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID;
-	
+
+	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
+	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
 
 	if g.TurnsLeft == 0 {
 		g.Lose()
@@ -209,7 +208,7 @@ func (g *Game) CreateState(playerid string) Game {
 	gCopy = *g
 
 	// clear the Deck (could be used to determine your hand)
-	gCopy.CardsLeft = len(gCopy.Deck);
+	gCopy.CardsLeft = len(gCopy.Deck)
 	gCopy.Deck = make([]Card, 0, 0)
 
 	// clear your hand, except for revealed info
