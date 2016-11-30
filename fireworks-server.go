@@ -48,6 +48,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			if initializationError != "" {
 				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
 				fmt.Fprintf(w, jsonError("Could not initialize game."))
+                return
 			}
 			s.games = append(s.games, game)
 			log.Printf("Created new game '%s'\n", m.Game)
@@ -91,6 +92,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		if startError != "" {
 			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
 			fmt.Fprintf(w, jsonError("Could not start game."))
+            return
 		}
 		log.Printf("Started game '%s'\n", m.Game)
 	}
@@ -100,6 +102,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
 			fmt.Fprintf(w, jsonError("Could not process move."))
+            return
 		}
 		log.Printf("Processed move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
@@ -108,6 +111,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
 		fmt.Fprintf(w, jsonError("Could not transmit game state to client."))
+        return
 	}
 	fmt.Fprintf(w, encodedGame)
 }
