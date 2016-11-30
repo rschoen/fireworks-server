@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+    "strings"
 	"time"
 )
 
@@ -26,7 +27,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	m, err := lib.DecodeMove(r.PostFormValue("data"))
 	if err != "" {
 		log.Println("Received malformed JSON message. Discarding.")
-		fmt.Fprintf(w, "Error: Data sent was malformed.")
+		fmt.Fprintf(w, jsonError("Data sent was malformed."))
 		return
 	}
 
@@ -46,7 +47,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			var initializationError = game.Initialize()
 			if initializationError != "" {
 				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
-				fmt.Fprintf(w, "Error: Could not initialize game.")
+				fmt.Fprintf(w, jsonError("Could not initialize game."))
 			}
 			s.games = append(s.games, game)
 			log.Printf("Created new game '%s'\n", m.Game)
@@ -70,26 +71,26 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if game == nil {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
-		fmt.Fprintf(w, "Error: The game you're attempting to play no longer exists.")
+		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
 		return
 	}
 
 	if player == nil {
 		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)
-		fmt.Fprintf(w, "Error: You're not a member of this game.")
+		fmt.Fprintf(w, jsonError("You're not a member of this game."))
 		return
 	}
 
 	if command == "start" {
 		if game.State != lib.StateNotStarted {
 			log.Printf("Attempting to start already started game '%s'\n", m.Game)
-			fmt.Fprintf(w, "Error: This game has already started.")
+			fmt.Fprintf(w, jsonError("This game has already started."))
 			return
 		}
 		var startError = game.Start()
 		if startError != "" {
 			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
-			fmt.Fprintf(w, "Error: Could not start game.")
+			fmt.Fprintf(w, jsonError("Could not start game."))
 		}
 		log.Printf("Started game '%s'\n", m.Game)
 	}
@@ -98,7 +99,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		var processError = game.ProcessMove(m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
-			fmt.Fprintf(w, "Error: Could not process move.")
+			fmt.Fprintf(w, jsonError("Could not process move."))
 		}
 		log.Printf("Processed move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
@@ -106,9 +107,13 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
-		fmt.Fprintf(w, "Error: Could not transmit game state to client.")
+		fmt.Fprintf(w, jsonError("Could not transmit game state to client."))
 	}
 	fmt.Fprintf(w, encodedGame)
+}
+
+func jsonError(err string) (string) {
+    return "{\"error\":\"" + strings.Replace(err,"\"","\\\"", -1) + "\"}"; 
 }
 
 type Server struct {
