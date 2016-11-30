@@ -18,14 +18,13 @@ type Game struct {
 	CurrentPlayerIndex int
 	CurrentPlayer      string
 	StartingTime       int
-	Finished           bool
-	Won                bool
+	State              int
 	TurnsLeft          int
 	CardsLeft          int
 }
 
 func (g *Game) Initialize() string {
-	if g.Finished {
+	if g.State != StateOngoing {
 		return "Attempting to initialize game after game has ended."
 	}
 
@@ -59,7 +58,7 @@ func (g *Game) AddPlayer(id string) string {
 	if g.Started {
 		return "Attempting to add player after game has started."
 	}
-	if g.Finished {
+	if g.State != StateOngoing {
 		return "Attempting to add players after game has ended."
 	}
 	if len(g.Players) >= len(cardsInHand)-1 {
@@ -77,7 +76,7 @@ func (g *Game) Start() string {
 	if g.Started {
 		return "Attempting to start a game already in progress."
 	}
-	if g.Finished {
+	if g.State != StateOngoing {
 		return "Attempting to start a game after it has ended."
 	}
 
@@ -109,7 +108,7 @@ func (g *Game) ProcessMove(m Message) string {
 	if !g.Started {
 		return "Attempting to process move for a game that hasn't started yet."
 	}
-	if g.Finished {
+	if g.State != StateOngoing {
 		return "Attempting to process a move for a Finished game."
 	}
 	if m.Player != g.CurrentPlayer {
@@ -142,13 +141,13 @@ func (g *Game) ProcessMove(m Message) string {
 				}
 			}
 			if g.PilesComplete() {
-				g.Win()
+				g.State = StatePerfect
 			}
 		} else {
 			// play was unsuccessful :(
 			g.Bombs--
 			if g.Bombs == 0 {
-				g.Lose()
+				g.State = StateBombedOut
 			}
 			g.Discard = append(g.Discard, card)
 		}
@@ -195,7 +194,7 @@ func (g *Game) ProcessMove(m Message) string {
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
 
 	if g.TurnsLeft == 0 {
-		g.Lose()
+		g.State = StateDeckEmpty
 	}
 
 	// TODO: log move (if it's valid)
@@ -228,14 +227,4 @@ func (g *Game) CreateState(playerid string) Game {
 	}
 	gCopy.Players = newPlayers
 	return gCopy
-}
-
-func (g *Game) Win() {
-	g.Finished = true
-	g.Won = true
-}
-
-func (g *Game) Lose() {
-	g.Finished = true
-	g.Won = false
 }

@@ -17,7 +17,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	// serve client HTTP responses, if it's turned on
 	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
-		if s.httpServer {
+		if s.httpServer == true {
 			http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
 		}
 		return
@@ -125,10 +125,13 @@ func main() {
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
 
 	// listen for connections
-	s.httpServer = *flag.Bool("http-server", true, "Whether to also serve HTTP responses outside API calls.")
-	s.clientDirectory = *flag.String("client-directory", lib.ClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
-	var port = flag.Int("port", lib.Port, "Port to listen for connections from client.")
+	httpServer := flag.Bool("http-server", false, "Whether to also serve HTTP responses outside API calls.")
+	clientDirectory := flag.String("client-directory", lib.ClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
+	port := flag.Int("port", lib.Port, "Port to listen for connections from client.")
 	flag.Parse()
+    
+    s.httpServer = *httpServer
+    s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 
