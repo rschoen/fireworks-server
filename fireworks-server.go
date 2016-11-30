@@ -68,13 +68,13 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	player := game.GetPlayerByID(m.Player)
-
 	if game == nil {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
 		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
 		return
 	}
+    
+	player := game.GetPlayerByID(m.Player)
 
 	if player == nil {
 		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)
