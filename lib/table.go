@@ -11,6 +11,7 @@ func (g *Game) PopulateDeck() {
 	for number, count := range numbers {
 		for _, color := range colors {
 			for j := 0; j < count; j++ {
+                g.Deck[i].ID = i
 				g.Deck[i].Color = color
 				g.Deck[i].Number = number
 				i++
