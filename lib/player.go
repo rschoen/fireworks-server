@@ -1,10 +1,5 @@
 package lib
 
-import (
-	"fmt"
-	"os"
-)
-
 type Player struct {
 	ID    string
 	Cards []Card
@@ -14,10 +9,13 @@ func (p *Player) Initialize(maxCards int) {
 	p.Cards = make([]Card, 0, maxCards)
 }
 
-func (p *Player) ReceiveHint(i int, infoType int) {
-	var card = p.GetCard(i)
-	var number = card.Number
-	var color = card.Color
+func (p *Player) ReceiveHint(i int, infoType int) string {
+	card, err := p.GetCard(i)
+	if err != "" {
+		return "Error retrieving card from player's hand: " + err
+	}
+	number := card.Number
+	color := card.Color
 	for index, _ := range p.Cards {
 		if infoType == infoNumber && p.Cards[index].Number == number {
 			p.Cards[index].KnownNumber = number
@@ -25,30 +23,32 @@ func (p *Player) ReceiveHint(i int, infoType int) {
 			p.Cards[index].KnownColor = color
 		}
 	}
+	return ""
 }
 
-func (p *Player) GetCard(i int) Card {
+func (p *Player) GetCard(i int) (Card, string) {
 	if i >= len(p.Cards) {
-		fmt.Printf("Referenced a non-existent card in a player's hand.")
-		os.Exit(1)
+		return Card{}, "Referenced a non-existent card in a player's hand."
 	}
-	return p.Cards[i]
+	return p.Cards[i], ""
 }
 
-func (p *Player) AddCard(c Card) {
+func (p *Player) AddCard(c Card) string {
 	if len(p.Cards) == cap(p.Cards) {
-		fmt.Printf("Attempted to add a card beyond hand capacity.")
+		return "Attempted to add a card beyond hand capacity."
 	}
 	p.Cards = append(p.Cards, c)
+
+	return ""
 }
 
-func (p *Player) RemoveCard(i int) Card {
+func (p *Player) RemoveCard(i int) (Card, string) {
 	if i >= len(p.Cards) {
-		fmt.Printf("Attempted to remove a non-existent card.")
+		return Card{}, "Attempted to remove a non-existent card"
 	}
 	var removedCard = p.Cards[i]
 	p.Cards = append(p.Cards[:i], p.Cards[i+1:]...)
-	return removedCard
+	return removedCard, ""
 }
 
 func (g *Game) GetPlayerByID(id string) *Player {

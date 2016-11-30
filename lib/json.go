@@ -2,8 +2,6 @@ package lib
 
 import (
 	"encoding/json"
-	"fmt"
-	"os"
 )
 
 type Message struct {
@@ -17,24 +15,22 @@ type Message struct {
 	HintColor    string
 }
 
-func EncodeGame(g Game) string {
+func EncodeGame(g Game) (string, string) {
 	b, err := json.Marshal(g)
 	if err != nil {
-		fmt.Printf("Error encoding game to JSON string.")
-		os.Exit(1)
+		return "", "Error encoding game to JSON string: " + err.Error()
 	}
 
-	return string(b)
+	return string(b), ""
 }
 
-func DecodeMove(s string) (Message, bool) {
+func DecodeMove(s string) (Message, string) {
 	b := []byte(s)
 	var m Message
 	err := json.Unmarshal(b, &m)
 	if err != nil {
-		fmt.Printf("Error decoding move from JSON string.\nGot message: %s\nError:%s\n\n", err, s)
-		return Message{}, false
+		return Message{}, "Error decoding move from JSON string.\nDecoding message: " + s + "\nError: " + err.Error()
 	}
 
-	return m, true
+	return m, ""
 }

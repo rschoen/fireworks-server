@@ -1,9 +1,7 @@
 package lib
 
 import (
-	"fmt"
 	"math/rand"
-	"os"
 )
 
 type Game struct {
@@ -26,10 +24,9 @@ type Game struct {
 	CardsLeft          int
 }
 
-func (g *Game) Initialize() bool {
+func (g *Game) Initialize() string {
 	if g.Finished {
-		fmt.Printf("Attempting to initialize game after game has ended.")
-		return false
+		return "Attempting to initialize game after game has ended."
 	}
 
 	// figure out how many cards are in the Deck
@@ -52,58 +49,51 @@ func (g *Game) Initialize() bool {
 	// start with no Players
 	g.Players = make([]Player, 0, len(cardsInHand)-1)
 	g.Initialized = true
-	fmt.Printf("Game '%s' initialized.\n", g.GameID)
-	return true
+	return ""
 }
 
-func (g *Game) AddPlayer(id string) bool {
+func (g *Game) AddPlayer(id string) string {
 	if !g.Initialized {
-		fmt.Printf("Attempting to add player before game has been fully Initialized.")
-		return false
+		return "Attempting to add player before game has been fully initialized."
 	}
 	if g.Started {
-		fmt.Printf("Attempting to add player after game has Started.")
-		return false
+		return "Attempting to add player after game has started."
 	}
 	if g.Finished {
-		fmt.Printf("Attempting to add Players after game has ended.")
-		return false
+		return "Attempting to add players after game has ended."
 	}
 	if len(g.Players) >= len(cardsInHand)-1 {
-		fmt.Printf("Attempted to add a player to a full game.")
-		return false
+		return "Attempted to add a player to a full game."
 	}
 
 	g.Players = append(g.Players, Player{ID: id})
-	fmt.Printf("Player '%s' joined game '%s'.\n", id, g.GameID)
-	return true
+	return ""
 }
 
-func (g *Game) Start() {
+func (g *Game) Start() string {
 	if !g.Initialized {
-		fmt.Printf("Attempting to start before game has been fully Initialized.")
-		os.Exit(1)
+		return "Attempting to start before game has been fully Initialized."
 	}
 	if g.Started {
-		fmt.Printf("Attempting to start a game already in progress.")
-		os.Exit(1)
+		return "Attempting to start a game already in progress."
 	}
 	if g.Finished {
-		fmt.Printf("Attempting to start a game after it has ended.")
-		os.Exit(1)
+		return "Attempting to start a game after it has ended."
 	}
+
 	numPlayers := len(g.Players)
 	if numPlayers >= len(cardsInHand) || cardsInHand[numPlayers] == 0 {
-		fmt.Printf("Attempted to start game with invalid number of Players.")
-		os.Exit(1)
+		return "Attempted to start game with invalid number of players."
 	}
 
 	// create hands
 	for index, _ := range g.Players {
 		g.Players[index].Initialize(cardsInHand[numPlayers])
 		for i := 0; i < cardsInHand[numPlayers]; i++ {
-			fmt.Printf("Adding card to player's hand.")
-			g.Players[index].AddCard(g.DrawCard())
+			err := g.Players[index].AddCard(g.DrawCard())
+			if err != "" {
+				return "Error initializing player's hand: " + err
+			}
 		}
 	}
 
@@ -111,33 +101,37 @@ func (g *Game) Start() {
 	g.CurrentPlayerIndex = rand.Intn(numPlayers)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
 	g.Started = true
+
+	return ""
 }
 
-func (g *Game) ProcessMove(m Message) bool {
+func (g *Game) ProcessMove(m Message) string {
 	if !g.Started {
-		fmt.Printf("Attempting to process move for a game that hasn't Started yet.")
-		return false
+		return "Attempting to process move for a game that hasn't started yet."
 	}
 	if g.Finished {
-		fmt.Printf("Attempting to process a move for a Finished game.")
-		return false
+		return "Attempting to process a move for a Finished game."
 	}
 	if m.Player != g.CurrentPlayer {
-		fmt.Printf("Attempting to process a move for out-of-turn player.")
-		return false
+		return "Attempting to process a move for out-of-turn player."
 	}
 	p := g.GetPlayerByID(m.Player)
 	if p == nil {
-		fmt.Printf("Attempting to process a move for a nonexistent player.")
-		return false
+		return "Attempting to process a move for a nonexistent player."
 	}
 
 	// TODO: more checking that it's a valid move
 
-	card := p.GetCard(m.CardIndex)
+	card, err := p.GetCard(m.CardIndex)
+	if err != "" {
+		return "Error retrieving card from player's hand: " + err
+	}
 
 	if m.MoveType == MovePlay {
-		p.RemoveCard(m.CardIndex)
+		_, err := p.RemoveCard(m.CardIndex)
+		if err != "" {
+			return "Error removing card from player's hand to play: " + err
+		}
 
 		if g.PlayCard(card) {
 			// play was successful!
@@ -159,7 +153,10 @@ func (g *Game) ProcessMove(m Message) bool {
 			g.Discard = append(g.Discard, card)
 		}
 	} else if m.MoveType == MoveDiscard {
-		p.RemoveCard(m.CardIndex)
+		_, err := p.RemoveCard(m.CardIndex)
+		if err != "" {
+			return "Error removing card from player's hand to discard: " + err
+		}
 		g.Discard = append(g.Discard, card)
 		g.Hints++
 		if g.Hints > maxHints {
@@ -167,23 +164,27 @@ func (g *Game) ProcessMove(m Message) bool {
 		}
 	} else if m.MoveType == MoveHint {
 		if g.Hints <= 0 {
-			return false
+			return "Attempting to hint with no hints remaining."
 		}
 		hintReceiver := g.GetPlayerByID(m.HintPlayer)
 		if hintReceiver == nil {
-			fmt.Printf("Attempting to give hint to a nonexistent player.")
-			return false
+			return "Attempting to give hint to a nonexistent player."
 		}
-		hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
+		err := hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
+		if err != "" {
+			return "Error giving hint: " + err
+		}
 		g.Hints--
 	} else {
-		fmt.Printf("Attempting to process unknown move type.")
-		return false
+		return "Attempting to process unknown move type."
 	}
 
 	if m.MoveType == MovePlay || m.MoveType == MoveDiscard {
 		if len(g.Deck) > 0 {
-			p.AddCard(g.DrawCard())
+			err := p.AddCard(g.DrawCard())
+			if err != "" {
+				return "Error drawing card: " + err
+			}
 		} else if g.TurnsLeft == -1 {
 			// Deck is empty, start the countdown
 			g.TurnsLeft = len(g.Players)
@@ -198,7 +199,7 @@ func (g *Game) ProcessMove(m Message) bool {
 	}
 
 	// TODO: log move (if it's valid)
-	return true
+	return ""
 }
 
 func (g *Game) CreateState(playerid string) Game {

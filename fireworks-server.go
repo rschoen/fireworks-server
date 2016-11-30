@@ -12,8 +12,10 @@ import (
 )
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
+	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
+	// serve client HTTP responses, if it's turned on
 	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
 		if s.httpServer {
 			http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
@@ -21,12 +23,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, ok := lib.DecodeMove(r.PostFormValue("data"))
-	if !ok {
-		fmt.Printf("Malformed message, Discarding.")
-		fmt.Fprintf(w, "Error: malformed JSON message.")
+	m, err := lib.DecodeMove(r.PostFormValue("data"))
+	if err != "" {
+		log.Println("Received malformed JSON message. Discarding.")
+		fmt.Fprintf(w, "Error: Data sent was malformed.")
 		return
 	}
+
+	var command = r.URL.Path[5:]
 	var game *lib.Game
 	for _, ongoingGame := range s.games {
 		if ongoingGame.GameID == m.Game {
@@ -34,71 +38,77 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if r.URL.Path[5:] == "join" {
+	if command == "join" {
 		// create game if it doesn't exist
 		if game == nil {
 			game = new(lib.Game)
 			game.GameID = m.Game
-			game.Initialize()
+			var initializationError = game.Initialize()
+			if initializationError != "" {
+				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
+				fmt.Fprintf(w, "Error: Could not initialize game.")
+			}
 			s.games = append(s.games, game)
-		} else {
-			fmt.Println(game)
+			log.Printf("Created new game '%s'\n", m.Game)
 		}
 
 		player := game.GetPlayerByID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
 			game.AddPlayer(m.Player)
-		} else {
-			fmt.Println(player)
+			log.Printf("Added player '%s' to game '%s'\n", m.Player, m.Game)
 		}
-
-		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
-		return
 	}
 
-	if r.URL.Path[5:] == "status" {
+	if command == "status" {
 		if game == nil {
-			fmt.Printf("Discarding status check for nonexistent game.")
 			return
 		}
-		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
-		return
 	}
 
 	player := game.GetPlayerByID(m.Player)
 
 	if game == nil {
-		fmt.Printf("Attempting to make a move on a nonexistent game.")
-		fmt.Fprintf(w, "Error: Attempted to make a move on nonexistent game.")
+		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
+		fmt.Fprintf(w, "Error: The game you're attempting to play no longer exists.")
 		return
 	}
 
 	if player == nil {
-		fmt.Printf("Attempting to make a move with nonexistent player.")
-		fmt.Fprintf(w, "Error: Attempting to make a move with nonexistent player.")
+		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)
+		fmt.Fprintf(w, "Error: You're not a member of this game.")
 		return
 	}
 
-	if r.URL.Path[5:] == "start" {
+	if command == "start" {
 		if game.Started {
-			fmt.Printf("Attempting to start already started game.")
-			fmt.Fprintf(w, "Error: Attempting to start already started game.")
+			log.Printf("Attempting to start already started game '%s'\n", m.Game)
+			fmt.Fprintf(w, "Error: This game has already started.")
 			return
 		}
-		game.Start()
-		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
-		return
+		var startError = game.Start()
+		if startError != "" {
+			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
+			fmt.Fprintf(w, "Error: Could not start game.")
+		}
+		log.Printf("Started game '%s'\n", m.Game)
 	}
 
-	if r.URL.Path[5:] == "move" {
-		game.ProcessMove(m)
-		fmt.Printf("Global game state: %#v\n\n", *game)
-		fmt.Fprintf(w, lib.EncodeGame(game.CreateState(m.Player)))
-		return
+	if command == "move" {
+		var processError = game.ProcessMove(m)
+		if processError != "" {
+			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
+			fmt.Fprintf(w, "Error: Could not process move.")
+		}
+		log.Printf("Processed move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
-	fmt.Fprintf(w, "done")
+	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
+	if err != "" {
+		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
+		fmt.Fprintf(w, "Error: Could not transmit game state to client.")
+	}
+	fmt.Fprintf(w, encodedGame)
 }
 
 type Server struct {
