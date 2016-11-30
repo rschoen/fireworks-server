@@ -23,8 +23,8 @@ type Game struct {
 }
 
 func (g *Game) Initialize() string {
-    g.State = StateNotStarted
-    
+	g.State = StateNotStarted
+
 	// figure out how many cards are in the Deck
 	maxCards := 0
 	for _, count := range numbers {
@@ -184,9 +184,9 @@ func (g *Game) ProcessMove(m Message) string {
 	if g.TurnsLeft == 0 {
 		g.State = StateDeckEmpty
 	}
-    if g.TurnsLeft > 0 {
-        g.TurnsLeft--
-    }
+	if g.TurnsLeft > 0 {
+		g.TurnsLeft--
+	}
 
 	// TODO: log move (if it's valid)
 	return ""

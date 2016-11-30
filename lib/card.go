@@ -1,7 +1,7 @@
 package lib
 
 type Card struct {
-    ID          int
+	ID          int
 	Number      int
 	Color       string
 	KnownNumber int
