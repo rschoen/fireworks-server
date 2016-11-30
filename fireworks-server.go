@@ -81,7 +81,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "start" {
-		if game.Started {
+		if game.State != lib.StateNotStarted {
 			log.Printf("Attempting to start already started game '%s'\n", m.Game)
 			fmt.Fprintf(w, "Error: This game has already started.")
 			return

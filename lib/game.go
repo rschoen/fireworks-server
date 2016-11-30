@@ -8,7 +8,6 @@ type Game struct {
 	GameID      string
 	Players     []Player
 	Initialized bool
-	Started     bool
 
 	Hints              int
 	Bombs              int
@@ -24,10 +23,8 @@ type Game struct {
 }
 
 func (g *Game) Initialize() string {
-	if g.State != StateOngoing {
-		return "Attempting to initialize game after game has ended."
-	}
-
+    g.State = StateNotStarted
+    
 	// figure out how many cards are in the Deck
 	maxCards := 0
 	for _, count := range numbers {
@@ -55,11 +52,8 @@ func (g *Game) AddPlayer(id string) string {
 	if !g.Initialized {
 		return "Attempting to add player before game has been fully initialized."
 	}
-	if g.Started {
-		return "Attempting to add player after game has started."
-	}
-	if g.State != StateOngoing {
-		return "Attempting to add players after game has ended."
+	if g.State != StateNotStarted {
+		return "Attempting to add players after game has started."
 	}
 	if len(g.Players) >= len(cardsInHand)-1 {
 		return "Attempted to add a player to a full game."
@@ -73,11 +67,8 @@ func (g *Game) Start() string {
 	if !g.Initialized {
 		return "Attempting to start before game has been fully Initialized."
 	}
-	if g.Started {
-		return "Attempting to start a game already in progress."
-	}
-	if g.State != StateOngoing {
-		return "Attempting to start a game after it has ended."
+	if g.State != StateNotStarted {
+		return "Attempting to start a game that has already been started."
 	}
 
 	numPlayers := len(g.Players)
@@ -99,17 +90,14 @@ func (g *Game) Start() string {
 	// let's do it
 	g.CurrentPlayerIndex = rand.Intn(numPlayers)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
-	g.Started = true
+	g.State = StateStarted
 
 	return ""
 }
 
 func (g *Game) ProcessMove(m Message) string {
-	if !g.Started {
-		return "Attempting to process move for a game that hasn't started yet."
-	}
-	if g.State != StateOngoing {
-		return "Attempting to process a move for a Finished game."
+	if g.State != StateStarted {
+		return "Attempting to process a move for a non-ongoing game."
 	}
 	if m.Player != g.CurrentPlayer {
 		return "Attempting to process a move for out-of-turn player."

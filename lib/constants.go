@@ -7,10 +7,11 @@ const MovePlay = 1
 const MoveDiscard = 2
 const MoveHint = 3
 
-const StateOngoing = 1
-const StateBombedOut = 2
-const StatePerfect = 3
-const StateDeckEmpty = 4
+const StateNotStarted = 1
+const StateStarted = 2
+const StateBombedOut = 3
+const StatePerfect = 4
+const StateDeckEmpty = 5
 
 var colors = [...]string{"red", "green", "blue", "yellow", "white"}
 var numbers = [...]int{0, 3, 2, 2, 2, 1} // this represents the COUNTS of each number (0 added for simplicity)
