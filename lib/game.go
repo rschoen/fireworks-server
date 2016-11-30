@@ -184,6 +184,7 @@ func (g *Game) ProcessMove(m Message) string {
 	if g.TurnsLeft == 0 {
 		g.State = StateDeckEmpty
 	}
+    g.TurnsLeft--
 
 	// TODO: log move (if it's valid)
 	return ""
