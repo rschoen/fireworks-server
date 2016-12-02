@@ -10,23 +10,23 @@ func (p *Player) Initialize(maxCards int) {
 }
 
 func (p *Player) ReceiveHint(i int, infoType int) ([]int, string) {
+	var changedCards []int
 	card, err := p.GetCard(i)
 	if err != "" {
-		return "Error retrieving card from player's hand: " + err
+		return changedCards, "Error retrieving card from player's hand: " + err
 	}
 	number := card.Number
 	color := card.Color
-	changedCards := []int;
 	for index, _ := range p.Cards {
 		if infoType == infoNumber && p.Cards[index].Number == number {
 			p.Cards[index].KnownNumber = number
-			changedCards = append(changedCards, p.Cards[index].Index)
+			changedCards = append(changedCards, p.Cards[index].ID)
 		} else if infoType == infoColor && p.Cards[index].Color == color {
 			p.Cards[index].KnownColor = color
-			changedCards = append(changedCards, p.Cards[index].Index)
+			changedCards = append(changedCards, p.Cards[index].ID)
 		}
 	}
-	return ""
+	return changedCards, ""
 }
 
 func (p *Player) GetCard(i int) (Card, string) {
