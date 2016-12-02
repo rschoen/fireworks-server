@@ -13,7 +13,7 @@ import (
 )
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
-	// allow requests to come from anywhere, since clients can be wherever
+	// allow reuests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// serve client HTTP responses, if it's turned on

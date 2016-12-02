@@ -20,6 +20,7 @@ type Game struct {
 	State              int
 	TurnsLeft          int
 	CardsLeft          int
+	CardsLastModified  [6]int
 }
 
 func (g *Game) Initialize() string {
@@ -114,12 +115,14 @@ func (g *Game) ProcessMove(m Message) string {
 		return "Error retrieving card from player's hand: " + err
 	}
 
+    var cardsModified []int;
+    
 	if m.MoveType == MovePlay {
-		_, err := p.RemoveCard(m.CardIndex)
+		card, err := p.RemoveCard(m.CardIndex)
 		if err != "" {
 			return "Error removing card from player's hand to play: " + err
 		}
-
+        cardsModified = append(cardsModified, card.Index)
 		if g.PlayCard(card) {
 			// play was successful!
 			if card.Number == 5 {
@@ -140,10 +143,11 @@ func (g *Game) ProcessMove(m Message) string {
 			g.Discard = append(g.Discard, card)
 		}
 	} else if m.MoveType == MoveDiscard {
-		_, err := p.RemoveCard(m.CardIndex)
+		card, err := p.RemoveCard(m.CardIndex)
 		if err != "" {
 			return "Error removing card from player's hand to discard: " + err
 		}
+        cardsModified = append(cardsModified, card.Index)
 		g.Discard = append(g.Discard, card)
 		g.Hints++
 		if g.Hints > maxHints {
@@ -157,10 +161,11 @@ func (g *Game) ProcessMove(m Message) string {
 		if hintReceiver == nil {
 			return "Attempting to give hint to a nonexistent player."
 		}
-		err := hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
+		cardsHinted, err := hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
 		if err != "" {
 			return "Error giving hint: " + err
 		}
+		cardsChanged = append(cardsChanged, cardsHinted)
 		g.Hints--
 	} else {
 		return "Attempting to process unknown move type."
@@ -168,10 +173,12 @@ func (g *Game) ProcessMove(m Message) string {
 
 	if m.MoveType == MovePlay || m.MoveType == MoveDiscard {
 		if len(g.Deck) > 0 {
-			err := p.AddCard(g.DrawCard())
+		    drawnCard := g.DrawCard()
+			err := p.AddCard(drawnCard)
 			if err != "" {
 				return "Error drawing card: " + err
 			}
+			cardsChanged = append(cardsChanged, drawnCard.Index)
 		} else if g.TurnsLeft == -1 {
 			// Deck is empty, start the countdown
 			g.TurnsLeft = len(g.Players)
@@ -180,6 +187,7 @@ func (g *Game) ProcessMove(m Message) string {
 
 	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
+	g.CardsLastModified = cardsChanged
 
 	if g.TurnsLeft == 0 {
 		g.State = StateDeckEmpty
