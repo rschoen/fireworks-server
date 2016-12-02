@@ -33,6 +33,7 @@ func (g *Game) PlayCard(c Card) bool {
 			if count+1 == c.Number {
 				// good play!
 				g.Piles[index]++
+				g.PileCards = append(g.PileCards, c)
 				return true
 			} else {
 				return false

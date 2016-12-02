@@ -14,6 +14,7 @@ type Game struct {
 	Deck               []Card
 	Discard            []Card
 	Piles              []int
+	PileCards          []Card
 	CurrentPlayerIndex int
 	CurrentPlayer      string
 	StartingTime       int
