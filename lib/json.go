@@ -13,6 +13,7 @@ type Message struct {
 	HintInfoType int
 	HintNumber   int
 	HintColor    string
+	Token        string
 }
 
 func EncodeGame(g Game) (string, string) {

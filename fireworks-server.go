@@ -26,7 +26,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	m, err := lib.DecodeMove(r.PostFormValue("data"))
 	if err != "" {
-		log.Println("Received malformed JSON message. Discarding.")
+		log.Println("Discarding malformed JSON message. Error: " + err)
 		fmt.Fprintf(w, jsonError("Data sent was malformed."))
 		return
 	}
@@ -38,6 +38,19 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			game = ongoingGame
 		}
 	}
+    
+    // Authenticate user
+    authResponse, authError := lib.Authenticate(m.Token)
+    if authError != "" {
+        log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
+        fmt.Fprintf(w, jsonError("Could not authorize user."))
+        return
+    }
+    if authResponse.GetGoogleID() != m.Player {
+        log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game, m.Game)
+        fmt.Fprintf(w, jsonError("Authenticated as a different user."))
+        return
+    }
 
 	if command == "join" {
 		// create game if it doesn't exist
@@ -54,10 +67,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Created new game '%s'\n", m.Game)
 		}
 
-		player := game.GetPlayerByID(m.Player)
+		player := game.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
-			game.AddPlayer(m.Player)
+			game.AddPlayer(m.Player, authResponse.GetGivenName())
 			log.Printf("Added player '%s' to game '%s'\n", m.Player, m.Game)
 		}
 	}
@@ -74,7 +87,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
     
-	player := game.GetPlayerByID(m.Player)
+	player := game.GetPlayerByGoogleID(m.Player)
 
 	if player == nil {
 		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)

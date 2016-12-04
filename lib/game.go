@@ -50,7 +50,7 @@ func (g *Game) Initialize() string {
 	return ""
 }
 
-func (g *Game) AddPlayer(id string) string {
+func (g *Game) AddPlayer(id string, name string) string {
 	if !g.Initialized {
 		return "Attempting to add player before game has been fully initialized."
 	}
@@ -61,7 +61,7 @@ func (g *Game) AddPlayer(id string) string {
 		return "Attempted to add a player to a full game."
 	}
 
-	g.Players = append(g.Players, Player{ID: id})
+	g.Players = append(g.Players, Player{GoogleID: id, Name: name})
 	return ""
 }
 
@@ -91,7 +91,7 @@ func (g *Game) Start() string {
 
 	// let's do it
 	g.CurrentPlayerIndex = rand.Intn(numPlayers)
-	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
+	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.State = StateStarted
 
 	return ""
@@ -104,7 +104,7 @@ func (g *Game) ProcessMove(m Message) string {
 	if m.Player != g.CurrentPlayer {
 		return "Attempting to process a move for out-of-turn player."
 	}
-	p := g.GetPlayerByID(m.Player)
+	p := g.GetPlayerByGoogleID(m.Player)
 	if p == nil {
 		return "Attempting to process a move for a nonexistent player."
 	}
@@ -153,7 +153,7 @@ func (g *Game) ProcessMove(m Message) string {
 		if g.Hints <= 0 {
 			return "Attempting to hint with no hints remaining."
 		}
-		hintReceiver := g.GetPlayerByID(m.HintPlayer)
+		hintReceiver := g.GetPlayerByGoogleID(m.HintPlayer)
 		if hintReceiver == nil {
 			return "Attempting to give hint to a nonexistent player."
 		}
@@ -182,7 +182,7 @@ func (g *Game) ProcessMove(m Message) string {
 	}
 
 	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
-	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].ID
+	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.CardsLastModified = cardsModified
 
 	if g.TurnsLeft == 0 {
@@ -197,7 +197,7 @@ func (g *Game) ProcessMove(m Message) string {
 }
 
 func (g *Game) CreateState(playerid string) Game {
-	p := g.GetPlayerByID(playerid)
+	p := g.GetPlayerByGoogleID(playerid)
 
 	gCopy := Game{}
 	gCopy = *g
@@ -209,7 +209,7 @@ func (g *Game) CreateState(playerid string) Game {
 	// clear your hand, except for revealed info
 	newPlayers := make([]Player, len(g.Players), len(g.Players))
 	for playerIndex, player := range gCopy.Players {
-		if p.ID == player.ID {
+		if p.GoogleID == player.GoogleID {
 			newHand := make([]Card, len(player.Cards), len(player.Cards))
 			for cardIndex, card := range player.Cards {
 				card.Color = ""
@@ -222,4 +222,17 @@ func (g *Game) CreateState(playerid string) Game {
 	}
 	gCopy.Players = newPlayers
 	return gCopy
+}
+
+func (g *Game) GetPlayerByGoogleID(id string) *Player {
+	var p *Player
+	if g.Players == nil {
+		return p
+	}
+	for index, _ := range g.Players {
+		if g.Players[index].GoogleID == id {
+			return &g.Players[index]
+		}
+	}
+	return p
 }

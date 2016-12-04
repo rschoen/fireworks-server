@@ -1,8 +1,9 @@
 package lib
 
 type Player struct {
-	ID    string
-	Cards []Card
+	GoogleID string
+	Name     string
+	Cards    []Card
 }
 
 func (p *Player) Initialize(maxCards int) {
@@ -52,17 +53,4 @@ func (p *Player) RemoveCard(i int) (Card, string) {
 	var removedCard = p.Cards[i]
 	p.Cards = append(p.Cards[:i], p.Cards[i+1:]...)
 	return removedCard, ""
-}
-
-func (g *Game) GetPlayerByID(id string) *Player {
-	var p *Player
-	if g.Players == nil {
-		return p
-	}
-	for index, _ := range g.Players {
-		if g.Players[index].ID == id {
-			return &g.Players[index]
-		}
-	}
-	return p
 }
