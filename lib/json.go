@@ -16,6 +16,25 @@ type Message struct {
 	Token        string
 }
 
+type MinimalGame struct {
+	Name    string
+	Players string
+}
+
+type GamesList struct {
+	OpenGames    []MinimalGame
+	PlayersGames []MinimalGame
+}
+
+func EncodeList(gl GamesList) (string, string) {
+	b, err := json.Marshal(gl)
+	if err != nil {
+		return "", "Error encoding list to JSON string: " + err.Error()
+	}
+
+	return string(b), ""
+}
+
 func EncodeGame(g Game) (string, string) {
 	b, err := json.Marshal(g)
 	if err != nil {

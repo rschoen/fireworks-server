@@ -51,6 +51,39 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
         fmt.Fprintf(w, jsonError("Authenticated as a different user."))
         return
     }
+    
+    if command == "list" {
+        list := lib.GamesList{}
+        for i, _ := range s.games {
+            playerList := ""
+            addGame := false
+            for player, _ := range s.games[i].Players {
+                playerList += s.games[i].Players[player].Name + ", "
+                if s.games[i].Players[player].GoogleID == m.Player {
+                    addGame = true
+                }
+            }
+            if playerList != "" {
+                playerList = playerList[:len(playerList)-2]
+            }
+            game := lib.MinimalGame{Name: s.games[i].GameID, Players: playerList}
+            
+            if addGame {
+                list.PlayersGames = append(list.PlayersGames, game)
+            } else if s.games[i].State == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers {
+                list.OpenGames = append(list.OpenGames, game)
+            }
+        }
+        
+        encodedList, err := lib.EncodeList(list)
+        if err != "" {
+            log.Printf("Failed to encode game list. Error: %s\n", err)
+            fmt.Fprintf(w, jsonError("Could not transmit game list to client."))
+            return
+        }
+        fmt.Fprintf(w, encodedList)
+        return
+    }
 
 	if command == "join" {
 		// create game if it doesn't exist
