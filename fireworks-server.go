@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
-    "strings"
+	"strings"
 	"time"
 )
 
@@ -38,52 +38,52 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			game = ongoingGame
 		}
 	}
-    
-    // Authenticate user
-    authResponse, authError := lib.Authenticate(m.Token)
-    if authError != "" {
-        log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
-        fmt.Fprintf(w, jsonError("Could not authorize user."))
-        return
-    }
-    if authResponse.GetGoogleID() != m.Player {
-        log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game, m.Game)
-        fmt.Fprintf(w, jsonError("Authenticated as a different user."))
-        return
-    }
-    
-    if command == "list" {
-        list := lib.GamesList{}
-        for i, _ := range s.games {
-            playerList := ""
-            addGame := false
-            for player, _ := range s.games[i].Players {
-                playerList += s.games[i].Players[player].Name + ", "
-                if s.games[i].Players[player].GoogleID == m.Player {
-                    addGame = true
-                }
-            }
-            if playerList != "" {
-                playerList = playerList[:len(playerList)-2]
-            }
-            game := lib.MinimalGame{Name: s.games[i].GameID, Players: playerList}
-            
-            if addGame {
-                list.PlayersGames = append(list.PlayersGames, game)
-            } else if s.games[i].State == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers {
-                list.OpenGames = append(list.OpenGames, game)
-            }
-        }
-        
-        encodedList, err := lib.EncodeList(list)
-        if err != "" {
-            log.Printf("Failed to encode game list. Error: %s\n", err)
-            fmt.Fprintf(w, jsonError("Could not transmit game list to client."))
-            return
-        }
-        fmt.Fprintf(w, encodedList)
-        return
-    }
+
+	// Authenticate user
+	authResponse, authError := lib.Authenticate(m.Token)
+	if authError != "" {
+		log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
+		fmt.Fprintf(w, jsonError("Could not authorize user."))
+		return
+	}
+	if authResponse.GetGoogleID() != m.Player {
+		log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game, m.Game)
+		fmt.Fprintf(w, jsonError("Authenticated as a different user."))
+		return
+	}
+
+	if command == "list" {
+		list := lib.GamesList{}
+		for i, _ := range s.games {
+			playerList := ""
+			addGame := false
+			for player, _ := range s.games[i].Players {
+				playerList += s.games[i].Players[player].Name + ", "
+				if s.games[i].Players[player].GoogleID == m.Player {
+					addGame = true
+				}
+			}
+			if playerList != "" {
+				playerList = playerList[:len(playerList)-2]
+			}
+			game := lib.MinimalGame{Name: s.games[i].GameID, Players: playerList}
+
+			if addGame {
+				list.PlayersGames = append(list.PlayersGames, game)
+			} else if s.games[i].State == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers {
+				list.OpenGames = append(list.OpenGames, game)
+			}
+		}
+
+		encodedList, err := lib.EncodeList(list)
+		if err != "" {
+			log.Printf("Failed to encode game list. Error: %s\n", err)
+			fmt.Fprintf(w, jsonError("Could not transmit game list to client."))
+			return
+		}
+		fmt.Fprintf(w, encodedList)
+		return
+	}
 
 	if command == "join" {
 		// create game if it doesn't exist
@@ -94,7 +94,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			if initializationError != "" {
 				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
 				fmt.Fprintf(w, jsonError("Could not initialize game."))
-                return
+				return
 			}
 			s.games = append(s.games, game)
 			log.Printf("Created new game '%s'\n", m.Game)
@@ -103,17 +103,17 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		player := game.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
-            if len(game.Players) >= lib.MaxPlayers {
-                log.Printf("Attempting to add player '%s' to full game '%s'\n", m.Player, m.Game)
-                fmt.Fprintf(w, jsonError("This game is now full."))
-                return
-            }
+			if len(game.Players) >= lib.MaxPlayers {
+				log.Printf("Attempting to add player '%s' to full game '%s'\n", m.Player, m.Game)
+				fmt.Fprintf(w, jsonError("This game is now full."))
+				return
+			}
 			addError := game.AddPlayer(m.Player, authResponse.GetGivenName())
-            if addError != "" {
-                log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
-                fmt.Fprintf(w, jsonError("Unable to join this game."))
-                return
-            }
+			if addError != "" {
+				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
+				fmt.Fprintf(w, jsonError("Unable to join this game."))
+				return
+			}
 			log.Printf("Added player '%s' to game '%s'\n", m.Player, m.Game)
 		}
 	}
@@ -129,7 +129,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
 		return
 	}
-    
+
 	player := game.GetPlayerByGoogleID(m.Player)
 
 	if player == nil {
@@ -148,21 +148,21 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		if startError != "" {
 			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
 			fmt.Fprintf(w, jsonError("Could not start game."))
-            return
+			return
 		}
 		log.Printf("Started game '%s'\n", m.Game)
 	}
 
 	if command == "move" {
-        if m.MoveType == lib.MoveHint && game.Hints <= 0 {
-            fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))
-            return
-        }
+		if m.MoveType == lib.MoveHint && game.Hints <= 0 {
+			fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))
+			return
+		}
 		var processError = game.ProcessMove(m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
 			fmt.Fprintf(w, jsonError("Could not process move."))
-            return
+			return
 		}
 		log.Printf("Processed move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
@@ -171,13 +171,13 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
 		fmt.Fprintf(w, jsonError("Could not transmit game state to client."))
-        return
+		return
 	}
 	fmt.Fprintf(w, encodedGame)
 }
 
-func jsonError(err string) (string) {
-    return "{\"error\":\"" + strings.Replace(err,"\"","\\\"", -1) + "\"}"; 
+func jsonError(err string) string {
+	return "{\"error\":\"" + strings.Replace(err, "\"", "\\\"", -1) + "\"}"
 }
 
 type Server struct {
@@ -198,9 +198,9 @@ func main() {
 	clientDirectory := flag.String("client-directory", lib.ClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
 	port := flag.Int("port", lib.Port, "Port to listen for connections from client.")
 	flag.Parse()
-    
-    s.httpServer = *httpServer
-    s.clientDirectory = *clientDirectory
+
+	s.httpServer = *httpServer
+	s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
 
