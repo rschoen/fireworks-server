@@ -103,7 +103,17 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		player := game.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
-			game.AddPlayer(m.Player, authResponse.GetGivenName())
+            if len(game.Players) >= lib.MaxPlayers {
+                log.Printf("Attempting to add player '%s' to full game '%s'\n", m.Player, m.Game)
+                fmt.Fprintf(w, jsonError("This game is now full."))
+                return
+            }
+			addError := game.AddPlayer(m.Player, authResponse.GetGivenName())
+            if addError != "" {
+                log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
+                fmt.Fprintf(w, jsonError("Unable to join this game."))
+                return
+            }
 			log.Printf("Added player '%s' to game '%s'\n", m.Player, m.Game)
 		}
 	}
@@ -144,6 +154,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "move" {
+        if m.MoveType == lib.MoveHint && game.Hints <= 0 {
+            fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))
+            return
+        }
 		var processError = game.ProcessMove(m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)

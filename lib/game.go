@@ -57,7 +57,7 @@ func (g *Game) AddPlayer(id string, name string) string {
 	if g.State != StateNotStarted {
 		return "Attempting to add players after game has started."
 	}
-	if len(g.Players) >= len(cardsInHand)-1 {
+	if len(g.Players) >= MaxPlayers {
 		return "Attempted to add a player to a full game."
 	}
 
