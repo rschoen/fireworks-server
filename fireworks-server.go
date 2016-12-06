@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -89,7 +90,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		// create game if it doesn't exist
 		if game == nil {
 			game = new(lib.Game)
-			game.GameID = m.Game
+			game.GameID = sanitizeAndTrim(m.Game, lib.MaxGameNameLength)
 			var initializationError = game.Initialize()
 			if initializationError != "" {
 				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
@@ -108,7 +109,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, jsonError("This game is now full."))
 				return
 			}
-			addError := game.AddPlayer(m.Player, authResponse.GetGivenName())
+			addError := game.AddPlayer(m.Player, sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength))
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
 				fmt.Fprintf(w, jsonError("Unable to join this game."))
@@ -178,6 +179,15 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 func jsonError(err string) string {
 	return "{\"error\":\"" + strings.Replace(err, "\"", "\\\"", -1) + "\"}"
+}
+
+func sanitizeAndTrim(text string, limit int) string {
+	re := regexp.MustCompile("[^A-Za-z0-9 _!,\\.-]+")
+	text = re.ReplaceAllString(text, "")
+	if len(text) > limit {
+		return text[:limit]
+	}
+	return text
 }
 
 type Server struct {

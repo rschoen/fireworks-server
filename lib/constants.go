@@ -25,3 +25,6 @@ var MaxPlayers = 5
 const MaxConcurrentGames = 100
 const ClientDirectory = "/var/www/"
 const Port = 8080
+
+const MaxPlayerNameLength = 10
+const MaxGameNameLength = 20
