@@ -4,6 +4,7 @@ type Player struct {
 	GoogleID string
 	Name     string
 	Cards    []Card
+	LastMove string
 }
 
 func (p *Player) Initialize(maxCards int) {
@@ -35,6 +36,15 @@ func (p *Player) GetCard(i int) (Card, string) {
 		return Card{}, "Referenced a non-existent card in a player's hand."
 	}
 	return p.Cards[i], ""
+}
+
+func (p *Player) GetCardByID(id int) Card {
+	for index, _ := range p.Cards {
+		if p.Cards[index].ID == id {
+			return p.Cards[index]
+		}
+	}
+	return Card{}
 }
 
 func (p *Player) AddCard(c Card) string {

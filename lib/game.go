@@ -2,6 +2,7 @@ package lib
 
 import (
 	"math/rand"
+	"strconv"
 )
 
 type Game struct {
@@ -130,6 +131,7 @@ func (g *Game) ProcessMove(m Message) string {
 			if g.PilesComplete() {
 				g.State = StatePerfect
 			}
+			p.LastMove = "played " + card.Color + " " + strconv.Itoa(card.Number)
 		} else {
 			// play was unsuccessful :(
 			g.Bombs--
@@ -137,6 +139,7 @@ func (g *Game) ProcessMove(m Message) string {
 				g.State = StateBombedOut
 			}
 			g.Discard = append(g.Discard, card)
+			p.LastMove = "bombed " + card.Color + " " + strconv.Itoa(card.Number)
 		}
 	} else if m.MoveType == MoveDiscard {
 		card, err := p.RemoveCard(m.CardIndex)
@@ -149,6 +152,7 @@ func (g *Game) ProcessMove(m Message) string {
 		if g.Hints > maxHints {
 			g.Hints = maxHints
 		}
+		p.LastMove = "discarded " + card.Color + " " + strconv.Itoa(card.Number)
 	} else if m.MoveType == MoveHint {
 		if g.Hints <= 0 {
 			return "Attempting to hint with no hints remaining."
@@ -163,6 +167,15 @@ func (g *Game) ProcessMove(m Message) string {
 		}
 		cardsModified = append(cardsModified, cardsHinted...)
 		g.Hints--
+
+		p.LastMove = "hinted " + hintReceiver.Name + "'s "
+		hintedCard := hintReceiver.GetCardByID(cardsModified[0])
+		if m.HintInfoType == infoNumber {
+			p.LastMove += strconv.Itoa(hintedCard.Number) + "s"
+		} else {
+			p.LastMove += hintedCard.Color + "s"
+		}
+
 	} else {
 		return "Attempting to process unknown move type."
 	}
