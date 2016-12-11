@@ -188,10 +188,12 @@ func (g *Game) ProcessMove(m Message) string {
 				return "Error drawing card: " + err
 			}
 			cardsModified = append(cardsModified, drawnCard.ID)
-		} else if g.TurnsLeft == -1 {
-			// Deck is empty, start the countdown
-			g.TurnsLeft = len(g.Players)
 		}
+	}
+
+	if len(g.Deck) == 0 && g.TurnsLeft == -1 {
+		// Deck is empty, start the countdown
+		g.TurnsLeft = len(g.Players)
 	}
 
 	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
