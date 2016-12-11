@@ -44,7 +44,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	authResponse, authError := lib.Authenticate(m.Token)
 	if authError != "" {
 		log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
-		fmt.Fprintf(w, jsonError("Could not authorize user."))
+		fmt.Fprintf(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
 		return
 	}
 	if authResponse.GetGoogleID() != m.Player {
