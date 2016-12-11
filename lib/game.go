@@ -168,7 +168,7 @@ func (g *Game) ProcessMove(m Message) string {
 		cardsModified = append(cardsModified, cardsHinted...)
 		g.Hints--
 
-		p.LastMove = "hinted " + hintReceiver.Name + "'s "
+		p.LastMove = "➡ " + hintReceiver.Name + " "
 		hintedCard := hintReceiver.GetCardByID(cardsModified[0])
 		if m.HintInfoType == infoNumber {
 			p.LastMove += strconv.Itoa(hintedCard.Number) + "s"
