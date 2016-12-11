@@ -90,7 +90,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		// create game if it doesn't exist
 		if game == nil {
 			game = new(lib.Game)
-			game.GameID = sanitizeAndTrim(m.Game, lib.MaxGameNameLength)
+			game.GameID = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
 			var initializationError = game.Initialize()
 			if initializationError != "" {
 				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
@@ -109,7 +109,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, jsonError("This game is now full."))
 				return
 			}
-			addError := game.AddPlayer(m.Player, sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength))
+			addError := game.AddPlayer(m.Player, sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true))
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
 				fmt.Fprintf(w, jsonError("Unable to join this game."))
@@ -181,9 +181,12 @@ func jsonError(err string) string {
 	return "{\"error\":\"" + strings.Replace(err, "\"", "\\\"", -1) + "\"}"
 }
 
-func sanitizeAndTrim(text string, limit int) string {
+func sanitizeAndTrim(text string, limit int, oneword bool) string {
 	re := regexp.MustCompile("[^A-Za-z0-9 _!,\\.-]+")
 	text = re.ReplaceAllString(text, "")
+	if oneword && strings.Index(text, " ") > -1 {
+		text = text[:strings.Index(text, " ")]
+	}
 	if len(text) > limit {
 		return text[:limit]
 	}
