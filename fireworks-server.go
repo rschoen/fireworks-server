@@ -19,7 +19,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	// serve client HTTP responses, if it's turned on
 	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
-		if s.protocol == "http" || s.protocol == "https" {
+		if s.fileServer {
 			http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
 		}
 		return
@@ -195,7 +195,7 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 
 type Server struct {
 	games           []*lib.Game
-	protocol        string
+	fileServer      bool
 	clientDirectory string
 }
 
@@ -207,22 +207,23 @@ func main() {
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
 
 	// listen for connections
-	protocol := flag.String("server", "", "Whether to serve http, https, or neither")
+	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
+	https := flag.Bool("https", false, "Whether to serve everything over HTTPS instead of HTTP")
 	clientDirectory := flag.String("client-directory", lib.DefaultClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
 	port := flag.Int("port", lib.DefaultPort, "Port to listen for connections from client.")
-	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if --server=https")
-	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if --server=https")
+	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if using --http")
+	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
 	flag.Parse()
 
-	s.protocol = *protocol
+	s.fileServer = *fileServer
 	s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
 	portString := ":" + strconv.Itoa(*port)
 
-	if s.protocol == "http" {
-		log.Fatal(http.ListenAndServe(portString, nil))
-	} else if s.protocol == "https" {
+	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))
+	} else {
+		log.Fatal(http.ListenAndServe(portString, nil))
 	}
 
 }
