@@ -23,8 +23,10 @@ var cardsInHand = [...]int{0, 0, 5, 5, 4, 4} // this represents the COUNTS for e
 var MaxPlayers = 5
 
 const MaxConcurrentGames = 100
-const ClientDirectory = "/var/www/"
-const Port = 8080
+const DefaultClientDirectory = "/var/www/"
+const DefaultPort = 8080
+const DefaultCertificate = "server.crt"
+const DefaultKey = "server.key"
 
 const MaxPlayerNameLength = 10
 const MaxGameNameLength = 20

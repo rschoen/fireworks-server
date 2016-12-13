@@ -19,7 +19,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	// serve client HTTP responses, if it's turned on
 	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
-		if s.httpServer == true {
+		if s.protocol == "http" || s.protocol == "https" {
 			http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
 		}
 		return
@@ -195,7 +195,7 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 
 type Server struct {
 	games           []*lib.Game
-	httpServer      bool
+	protocol        string
 	clientDirectory string
 }
 
@@ -207,14 +207,22 @@ func main() {
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
 
 	// listen for connections
-	httpServer := flag.Bool("http-server", false, "Whether to also serve HTTP responses outside API calls.")
-	clientDirectory := flag.String("client-directory", lib.ClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
-	port := flag.Int("port", lib.Port, "Port to listen for connections from client.")
+	protocol := flag.String("server", "", "Whether to serve http, https, or neither")
+	clientDirectory := flag.String("client-directory", lib.DefaultClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
+	port := flag.Int("port", lib.DefaultPort, "Port to listen for connections from client.")
+	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if --server=https")
+	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if --server=https")
 	flag.Parse()
 
-	s.httpServer = *httpServer
+	s.protocol = *protocol
 	s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
-	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(*port), nil))
+	portString := ":" + strconv.Itoa(*port)
+
+	if s.protocol == "http" {
+		log.Fatal(http.ListenAndServe(portString, nil))
+	} else if s.protocol == "https" {
+		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))
+	}
 
 }
