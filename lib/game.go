@@ -7,6 +7,7 @@ import (
 
 type Game struct {
 	GameID      string
+	Turn        int
 	Players     []Player
 	Initialized bool
 
@@ -44,6 +45,7 @@ func (g *Game) Initialize() string {
 	g.Hints = startingHints
 	g.Bombs = startingBombs
 	g.TurnsLeft = -1
+	g.Turn = 0
 
 	// start with no Players
 	g.Players = make([]Player, 0, len(cardsInHand)-1)
@@ -63,6 +65,7 @@ func (g *Game) AddPlayer(id string, name string) string {
 	}
 
 	g.Players = append(g.Players, Player{GoogleID: id, Name: name})
+	g.Turn++
 	return ""
 }
 
@@ -94,6 +97,7 @@ func (g *Game) Start() string {
 	g.CurrentPlayerIndex = rand.Intn(numPlayers)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.State = StateStarted
+	g.Turn++
 
 	return ""
 }
@@ -200,6 +204,7 @@ func (g *Game) ProcessMove(m Message) string {
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.CardsLastModified = cardsModified
 
+	g.Turn++
 	if g.TurnsLeft == 0 {
 		g.State = StateDeckEmpty
 	}
