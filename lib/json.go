@@ -17,6 +17,7 @@ type Message struct {
 }
 
 type MinimalGame struct {
+	ID      string
 	Name    string
 	Players string
 }

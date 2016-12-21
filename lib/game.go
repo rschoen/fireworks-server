@@ -6,7 +6,8 @@ import (
 )
 
 type Game struct {
-	GameID      string
+	ID          string
+	Name        string
 	Turn        int
 	Players     []Player
 	Initialized bool

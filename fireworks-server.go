@@ -35,7 +35,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	var command = r.URL.Path[5:]
 	var game *lib.Game
 	for _, ongoingGame := range s.games {
-		if ongoingGame.GameID == m.Game {
+		if ongoingGame.ID == m.Game {
 			game = ongoingGame
 		}
 	}
@@ -67,7 +67,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			if playerList != "" {
 				playerList = playerList[:len(playerList)-2]
 			}
-			game := lib.MinimalGame{Name: s.games[i].GameID, Players: playerList}
+			game := lib.MinimalGame{ID: s.games[i].ID, Name: s.games[i].Name, Players: playerList}
 
 			if addGame {
 				list.PlayersGames = append(list.PlayersGames, game)
@@ -90,7 +90,8 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		// create game if it doesn't exist
 		if game == nil {
 			game = new(lib.Game)
-			game.GameID = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
+			game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
+			game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 			var initializationError = game.Initialize()
 			if initializationError != "" {
 				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
