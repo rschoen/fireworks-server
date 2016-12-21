@@ -8,9 +8,9 @@ import (
 type Game struct {
 	ID          string
 	Name        string
-	Turn        int
 	Players     []Player
 	Initialized bool
+	Public      bool
 
 	Hints              int
 	Bombs              int
@@ -20,11 +20,12 @@ type Game struct {
 	PileCards          []Card
 	CurrentPlayerIndex int
 	CurrentPlayer      string
-	StartingTime       int
 	State              int
+	Turn               int
 	TurnsLeft          int
 	CardsLeft          int
 	CardsLastModified  []int
+	Type               int
 }
 
 func (g *Game) Initialize() string {

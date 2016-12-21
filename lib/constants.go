@@ -13,6 +13,11 @@ const StateBombedOut = 3
 const StatePerfect = 4
 const StateDeckEmpty = 5
 
+const GameTypeNormal = 1
+const GameTypeRainbows = 2
+const GameTypeWildcare = 3
+const GameTypeHard = 4
+
 var colors = [...]string{"red", "green", "blue", "yellow", "white"}
 var numbers = [...]int{0, 3, 2, 2, 2, 1} // this represents the COUNTS of each number (0 added for simplicity)
 const maxHints = 8
