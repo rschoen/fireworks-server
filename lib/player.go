@@ -20,10 +20,10 @@ func (p *Player) ReceiveHint(i int, infoType int) ([]int, string) {
 	number := card.Number
 	color := card.Color
 	for index, _ := range p.Cards {
-		if infoType == infoNumber && p.Cards[index].Number == number {
+		if infoType == HintNumber && p.Cards[index].Number == number {
 			p.Cards[index].KnownNumber = number
 			changedCards = append(changedCards, p.Cards[index].ID)
-		} else if infoType == infoColor && p.Cards[index].Color == color {
+		} else if infoType == HintColor && p.Cards[index].Color == color {
 			p.Cards[index].KnownColor = color
 			changedCards = append(changedCards, p.Cards[index].ID)
 		}

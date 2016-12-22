@@ -14,6 +14,7 @@ type Message struct {
 	HintNumber   int
 	HintColor    string
 	Token        string
+	Result	 	 int
 }
 
 type MinimalGame struct {
@@ -54,4 +55,24 @@ func DecodeMove(s string) (Message, string) {
 	}
 
 	return m, ""
+}
+
+func EncodeLogEntry(le LogEntry) (string, string) {
+	b, err := json.Marshal(le)
+	if err != nil {
+		return "", "Error encoding log entry to JSON string: " + err.Error()
+	}
+
+	return string(b), ""
+}
+
+func DecodeLogEntry(s string) (LogEntry, string) {
+	b := []byte(s)
+	var le LogEntry
+	err := json.Unmarshal(b, &le)
+	if err != nil {
+		return LogEntry{}, "Error decoding log entry from JSON string.\nDecoding string: " + s + "\nError: " + err.Error()
+	}
+
+	return le, ""
 }

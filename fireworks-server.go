@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/rschoen/fireworks-server/lib"
+	"fireworks-server/lib"
 	"log"
 	"math/rand"
 	"net/http"
@@ -160,13 +160,19 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))
 			return
 		}
-		var processError = game.ProcessMove(m)
+		var processError = game.ProcessMove(&m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
 			fmt.Fprintf(w, jsonError("Could not process move."))
 			return
 		}
-		log.Printf("Processed move by player '%s' in game '%s'\n", m.Player, m.Game)
+		logError := s.logger.LogMove(*game, m, true)
+		if logError != "" {
+			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
+			fmt.Fprintf(w, jsonError("Could not log move."))
+			return
+		}
+		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
 	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
@@ -196,6 +202,7 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 
 type Server struct {
 	games           []*lib.Game
+	logger			*lib.Logger
 	fileServer      bool
 	clientDirectory string
 }
@@ -207,19 +214,30 @@ func main() {
 	s := Server{}
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
 
-	// listen for connections
 	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
 	https := flag.Bool("https", false, "Whether to serve everything over HTTPS instead of HTTP")
 	clientDirectory := flag.String("client-directory", lib.DefaultClientDirectory, "Directory to serve HTTP responses from (fireworks-client directory)")
 	port := flag.Int("port", lib.DefaultPort, "Port to listen for connections from client.")
 	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if using --http")
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
+	logDir := flag.String("logdir", lib.DefaultLogDirectory, "Path to log directory, defaults to ./log/")
 	flag.Parse()
 
 	s.fileServer = *fileServer
 	s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
 	portString := ":" + strconv.Itoa(*port)
+
+	// set up the logger and reconsitute games in progress
+	s.logger = new(lib.Logger);
+	s.logger.Directory = *logDir
+	games, loggerError := s.logger.Initialize()
+	if loggerError != "" {
+		log.Fatal("Failed to initialize logger. Error: " + loggerError)
+	}
+	s.games = append(s.games, games...)
+
+
 
 	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))

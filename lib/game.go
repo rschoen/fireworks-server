@@ -3,6 +3,7 @@ package lib
 import (
 	"math/rand"
 	"strconv"
+	"time"
 )
 
 type Game struct {
@@ -26,6 +27,7 @@ type Game struct {
 	CardsLeft          int
 	CardsLastModified  []int
 	Type               int
+	StartTime		   int64
 }
 
 func (g *Game) Initialize() string {
@@ -99,12 +101,14 @@ func (g *Game) Start() string {
 	g.CurrentPlayerIndex = rand.Intn(numPlayers)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.State = StateStarted
+	g.StartTime = time.Now().Unix()
 	g.Turn++
 
 	return ""
 }
 
-func (g *Game) ProcessMove(m Message) string {
+func (g *Game) ProcessMove(mp *Message) string {
+	m := *mp
 	if g.State != StateStarted {
 		return "Attempting to process a move for a non-ongoing game."
 	}
@@ -128,6 +132,7 @@ func (g *Game) ProcessMove(m Message) string {
 		cardsModified = append(cardsModified, card.ID)
 		if g.PlayCard(card) {
 			// play was successful!
+			m.Result = ResultPlay
 			if card.Number == 5 {
 				g.Hints++
 				if g.Hints > maxHints {
@@ -140,6 +145,7 @@ func (g *Game) ProcessMove(m Message) string {
 			p.LastMove = "played " + card.Color + " " + strconv.Itoa(card.Number)
 		} else {
 			// play was unsuccessful :(
+			m.Result = ResultBomb
 			g.Bombs--
 			if g.Bombs == 0 {
 				g.State = StateBombedOut
@@ -176,7 +182,7 @@ func (g *Game) ProcessMove(m Message) string {
 
 		p.LastMove = "➡ " + hintReceiver.Name + " "
 		hintedCard := hintReceiver.GetCardByID(cardsModified[0])
-		if m.HintInfoType == infoNumber {
+		if m.HintInfoType == HintNumber {
 			p.LastMove += strconv.Itoa(hintedCard.Number) + "s"
 		} else {
 			p.LastMove += hintedCard.Color + "s"
@@ -214,7 +220,6 @@ func (g *Game) ProcessMove(m Message) string {
 		g.TurnsLeft--
 	}
 
-	// TODO: log move (if it's valid)
 	return ""
 }
 

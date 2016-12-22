@@ -51,3 +51,11 @@ func (g *Game) PilesComplete() bool {
 	}
 	return true
 }
+
+func (g *Game) Score() int {
+	score := 0
+	for _, count := range g.Piles {
+		score += count
+	}
+	return score
+}
