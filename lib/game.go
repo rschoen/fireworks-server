@@ -13,6 +13,7 @@ type Game struct {
 	Public      bool
 
 	Hints              int
+	MaxHints           int
 	Bombs              int
 	Deck               []Card
 	Discard            []Card
@@ -25,26 +26,51 @@ type Game struct {
 	TurnsLeft          int
 	CardsLeft          int
 	CardsLastModified  []int
-	Type               int
+	Mode               int
+	Colors             []string
 }
 
-func (g *Game) Initialize() string {
+func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints int, startingBombs int) string {
 	g.State = StateNotStarted
 
+	// validate input
+
+	if maxHints < 1 {
+		maxHints = DefaultMaxHints
+	}
+	if startingHints < 1 || startingHints > maxHints {
+		startingHints = maxHints
+	}
+	if startingBombs < 1 {
+		startingBombs = DefaultStartingBombs
+	}
+
+	if gameMode != ModeNormal && gameMode != ModeRainbow && gameMode != ModeWildcard && gameMode != ModeHard {
+		gameMode = ModeNormal
+	}
+
 	// figure out how many cards are in the Deck
+	if gameMode == ModeNormal {
+		g.Colors = normalColors[:]
+	} else {
+		g.Colors = rainbowColors[:]
+	}
 	maxCards := 0
 	for _, count := range numbers {
-		maxCards += count * len(colors)
+		maxCards += count * len(g.Colors)
 	}
 
 	// populate the Deck, Discard, and Piles
 	g.Deck = make([]Card, maxCards, maxCards)
 	g.PopulateDeck()
 	g.Discard = make([]Card, 0, maxCards)
-	g.Piles = make([]int, len(colors), len(colors))
+	g.Piles = make([]int, len(g.Colors), len(g.Colors))
 
 	// set starting values
+	g.Public = public
+	g.Mode = gameMode
 	g.Hints = startingHints
+	g.MaxHints = maxHints
 	g.Bombs = startingBombs
 	g.TurnsLeft = -1
 	g.Turn = 0
@@ -130,8 +156,8 @@ func (g *Game) ProcessMove(m Message) string {
 			// play was successful!
 			if card.Number == 5 {
 				g.Hints++
-				if g.Hints > maxHints {
-					g.Hints = maxHints
+				if g.Hints > g.MaxHints {
+					g.Hints = g.MaxHints
 				}
 			}
 			if g.PilesComplete() {
@@ -155,8 +181,8 @@ func (g *Game) ProcessMove(m Message) string {
 		cardsModified = append(cardsModified, card.ID)
 		g.Discard = append(g.Discard, card)
 		g.Hints++
-		if g.Hints > maxHints {
-			g.Hints = maxHints
+		if g.Hints > g.MaxHints {
+			g.Hints = g.MaxHints
 		}
 		p.LastMove = "discarded " + card.Color + " " + strconv.Itoa(card.Number)
 	} else if m.MoveType == MoveHint {
@@ -167,7 +193,7 @@ func (g *Game) ProcessMove(m Message) string {
 		if hintReceiver == nil {
 			return "Attempting to give hint to a nonexistent player."
 		}
-		cardsHinted, err := hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType)
+		cardsHinted, err := hintReceiver.ReceiveHint(m.CardIndex, m.HintInfoType, m.HintColor, g.Mode)
 		if err != "" {
 			return "Error giving hint: " + err
 		}
