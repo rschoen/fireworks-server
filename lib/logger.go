@@ -52,6 +52,9 @@ type StatLog struct {
 }
 
 func (l *Logger) Initialize() ([]*Game, string) {
+	l.Games = make([]GameLog, 0, MaxStoredGames)
+	l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
+
 	err := os.Mkdir(l.Directory, os.ModeDir | os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return make([]*Game, 0, 0),"Error creating log directory: "+err.Error()
@@ -67,7 +70,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 		return make([]*Game, 0, 0),"Error opening log directory: "+readError.Error()
 	}
 
-	games := make([]*Game, MaxConcurrentGames, MaxConcurrentGames)
+	games := make([]*Game, 0, MaxConcurrentGames)
 	for _, name := range names {
 		if strings.Index(name, ".json") > -1 {
 			json := "" // TODO read umtil newline
@@ -85,7 +88,6 @@ func (l *Logger) Initialize() ([]*Game, string) {
 	}
 
 	return games, ""
-
 }
 
 func (l *Logger) LogMove(g Game, m Message, writeToFile bool) string {
@@ -167,6 +169,7 @@ func (l *Logger) GetOrCreateGameLog(g Game) (*GameLog, string) {
 	}
 	gl.File = file
 
+	l.Games = append(l.Games, gl)
 	return &gl, ""
 }
 
@@ -179,6 +182,7 @@ func (l *Logger) GetOrCreatePlayerLog(p string, g Game) *PlayerLog {
 
 	pl := PlayerLog{ID: p, Stats: StatLog{}}
 	pl.Name = g.GetPlayerByGoogleID(p).Name
+	l.Players = append(l.Players, pl)
 	return &pl
 }
 
@@ -192,6 +196,20 @@ func (l *Logger) GetAllPlayersStatList(g Game, gl *GameLog) []*StatLog {
 	sl = append(sl, &l.Stats)
 	sl = append(sl, &gl.Stats)
 	return sl
+}
+
+func (l *Logger) CreateStatsLog() Logger {
+	lCopy := Logger{}
+	lCopy = *l
+
+	// clear the logging directory
+	lCopy.Directory = ""
+
+	// clear game file handlers
+	for index, _ := range lCopy.Games {
+		lCopy.Games[index].File = nil
+	}
+	return lCopy
 }
 
 
@@ -222,11 +240,13 @@ func IncreaseProperty(p string, n int64, stats ...*StatLog) {
 
 func IncrementScore(n int, stats ...*StatLog) {
 	for i := range stats {
-		nums := stats[i].Scores
-		if _, ok := nums[n]; ok {
-    		nums[n]++;
+		if stats[i].Scores == nil {
+			stats[i].Scores = make(map[int]int)
+		}
+		if _, ok := stats[i].Scores[n]; ok {
+    		stats[i].Scores[n]++;
 		} else {
-			nums[n] = 1;
+			stats[i].Scores[n] = 1;
 		}
 	}
 }

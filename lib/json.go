@@ -76,3 +76,12 @@ func DecodeLogEntry(s string) (LogEntry, string) {
 
 	return le, ""
 }
+
+func EncodeStatsLog(l Logger) (string, string) {
+	b, err := json.Marshal(l)
+	if err != nil {
+		return "", "Error encoding stats log to JSON string: " + err.Error()
+	}
+
+	return string(b), ""
+}

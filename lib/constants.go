@@ -30,9 +30,10 @@ const startingHints = 8
 const startingBombs = 3
 
 var cardsInHand = [...]int{0, 0, 5, 5, 4, 4} // this represents the COUNTS for each # of players
-var MaxPlayers = 5
+const MaxPlayers = 5
 
 const MaxConcurrentGames = 100
+const MaxStoredGames = 1000
 const DefaultClientDirectory = "/var/www/"
 const DefaultPort = 8080
 const DefaultCertificate = "server.crt"

@@ -25,14 +25,26 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var command = r.URL.Path[5:]
+
+
+	if command == "stats" {
+		json, err := lib.EncodeStatsLog(s.logger.CreateStatsLog())
+		if err != "" {
+			log.Printf("Failed to encode stats log. Error: %s\n", err)
+			return
+		}
+		fmt.Fprintf(w, json)
+		return
+	}
+
+
 	m, err := lib.DecodeMove(r.PostFormValue("data"))
 	if err != "" {
 		log.Println("Discarding malformed JSON message. Error: " + err)
 		fmt.Fprintf(w, jsonError("Data sent was malformed."))
 		return
 	}
-
-	var command = r.URL.Path[5:]
 	var game *lib.Game
 	for _, ongoingGame := range s.games {
 		if ongoingGame.ID == m.Game {
