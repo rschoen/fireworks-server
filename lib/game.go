@@ -132,7 +132,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 		cardsModified = append(cardsModified, card.ID)
 		if g.PlayCard(card) {
 			// play was successful!
-			m.Result = ResultPlay
+			mp.Result = ResultPlay
 			if card.Number == 5 {
 				g.Hints++
 				if g.Hints > maxHints {
@@ -145,7 +145,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 			p.LastMove = "played " + card.Color + " " + strconv.Itoa(card.Number)
 		} else {
 			// play was unsuccessful :(
-			m.Result = ResultBomb
+			mp.Result = ResultBomb
 			g.Bombs--
 			if g.Bombs == 0 {
 				g.State = StateBombedOut

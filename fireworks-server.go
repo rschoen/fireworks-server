@@ -122,13 +122,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, jsonError("This game is now full."))
 				return
 			}
-			addError := game.AddPlayer(m.Player, sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true))
+			playerName := sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true)
+			addError := game.AddPlayer(m.Player, playerName)
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
 				fmt.Fprintf(w, jsonError("Unable to join this game."))
 				return
 			}
-			log.Printf("Added player '%s' to game '%s'\n", m.Player, m.Game)
+			log.Printf("Added player '%s' to game '%s'\n", playerName, game.Name)
 		}
 	}
 
@@ -178,7 +179,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, jsonError("Could not process move."))
 			return
 		}
-		logError := s.logger.LogMove(*game, m, true)
+		logError := s.logger.LogMove(*game, m, time.Now().Unix(), true)
 		if logError != "" {
 			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
 			fmt.Fprintf(w, jsonError("Could not log move."))
@@ -243,11 +244,13 @@ func main() {
 	// set up the logger and reconsitute games in progress
 	s.logger = new(lib.Logger);
 	s.logger.Directory = *logDir
+	fmt.Println("Re-constituting games in progress.")
 	games, loggerError := s.logger.Initialize()
 	if loggerError != "" {
 		log.Fatal("Failed to initialize logger. Error: " + loggerError)
 	}
 	s.games = append(s.games, games...)
+	fmt.Printf("Re-constituted %d games.\n", len(games))
 
 
 

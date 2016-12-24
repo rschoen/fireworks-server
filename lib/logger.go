@@ -1,10 +1,10 @@
 package lib
 
 import (
+	"bufio"
 	"os"
 	"reflect"
 	"strings"
-	"time"
 )
 
 type Logger struct {
@@ -15,6 +15,7 @@ type Logger struct {
 }
 
 type LogEntry struct {
+	Timestamp int64
 	Game Game
 	Move Message
 }
@@ -48,7 +49,7 @@ type StatLog struct {
 	GameTime int64
 	StartedGames int64
 	FinishedGames int64
-	Scores map[int]int
+	Scores []int
 }
 
 func (l *Logger) Initialize() ([]*Game, string) {
@@ -67,19 +68,33 @@ func (l *Logger) Initialize() ([]*Game, string) {
 
 	names, readError := dir.Readdirnames(0)
 	if readError != nil {
-		return make([]*Game, 0, 0),"Error opening log directory: "+readError.Error()
+		return make([]*Game, 0, 0),"Error reading log directory: "+readError.Error()
 	}
 
 	games := make([]*Game, 0, MaxConcurrentGames)
 	for _, name := range names {
 		if strings.Index(name, ".json") > -1 {
-			json := "" // TODO read umtil newline
-
-			le, decodeError := DecodeLogEntry(json)
-			if decodeError != "" {
-				return make([]*Game, 0, 0),"Error decoding log: "+readError.Error()
+			file, fileError := os.Open(l.Directory + name)
+			if fileError != nil {
+				return make([]*Game, 0, 0),"Error opening log file: "+fileError.Error()
 			}
-			l.LogMove(le.Game, le.Move, false)
+			scanner := bufio.NewScanner(file)
+			var le LogEntry
+			var decodeError string
+
+			for scanner.Scan() {
+				json := scanner.Text();
+				le, decodeError = DecodeLogEntry(json)
+				if decodeError != "" {
+					return make([]*Game, 0, 0),"Error decoding log: "+decodeError
+				}
+				l.LogMove(le.Game, le.Move, le.Timestamp, false)
+			}
+
+			if err := scanner.Err(); err != nil {
+		        return make([]*Game, 0, 0),"Error scanning log file: "+err.Error()
+		    }
+			defer file.Close()
 
 			if le.Game.State == StateNotStarted || le.Game.State == StateStarted {
 				games = append(games, &le.Game)
@@ -90,7 +105,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 	return games, ""
 }
 
-func (l *Logger) LogMove(g Game, m Message, writeToFile bool) string {
+func (l *Logger) LogMove(g Game, m Message, t int64, writeToFile bool) string {
 	// find or create game log
 	gl, err := l.GetOrCreateGameLog(g);
 	if err != "" {
@@ -99,7 +114,7 @@ func (l *Logger) LogMove(g Game, m Message, writeToFile bool) string {
 
 	// log move to game log
 	if writeToFile {
-		le := LogEntry{Game: g, Move: m}
+		le := LogEntry{Timestamp: t, Game: g, Move: m}
 		logError := gl.LogMove(le)
 		if logError != "" {
 			return "Error logging move: " + logError;
@@ -107,13 +122,12 @@ func (l *Logger) LogMove(g Game, m Message, writeToFile bool) string {
 	}
 
 	// figure out all the stats
-	now := time.Now().Unix()
 	pl := l.GetOrCreatePlayerLog(m.Player, g)
 	statList := [...]*StatLog{&l.Stats, &gl.Stats, &pl.Stats}
 	allPlayersStatsList := l.GetAllPlayersStatList(g, gl)
 
 	IncrementProperty("Moves", statList[:]...)
-	IncreaseProperty("TurnTime", now-gl.LastMoveTime, statList[:]...)
+	IncreaseProperty("TurnTime", t-gl.LastMoveTime, statList[:]...)
 
 	if m.MoveType == MovePlay && m.Result == ResultPlay {
 		IncrementProperty("Plays", statList[:]...)
@@ -135,20 +149,22 @@ func (l *Logger) LogMove(g Game, m Message, writeToFile bool) string {
 	}
 
 	if g.State == StateBombedOut {
-		IncrementProperty("BombLosses", allPlayersStatsList[:]...)
+		IncrementProperty("BombsLosses", allPlayersStatsList[:]...)
 	} else if g.State == StateDeckEmpty {
-		IncrementProperty("TurnLosses", allPlayersStatsList[:]...)
+		IncrementProperty("TurnsLosses", allPlayersStatsList[:]...)
 	} else if g.State == StateNoPlays {
 		IncrementProperty("NoPlaysLosses", allPlayersStatsList[:]...)
 	}
 
 	if g.State == StateBombedOut || g.State == StateDeckEmpty || g.State == StateNoPlays || g.State == StatePerfect {
 		IncrementProperty("FinishedGames", allPlayersStatsList[:]...)
-		IncreaseProperty("GameTime", now-g.StartTime, allPlayersStatsList[:]...)
+		IncreaseProperty("GameTime", t-g.StartTime, allPlayersStatsList[:]...)
 		IncrementScore(g.Score(), allPlayersStatsList[:]...)
 
-		gl.File.Close()
+		defer gl.File.Close()
 	}
+
+	gl.LastMoveTime = t
 
 
 	return ""
@@ -163,14 +179,22 @@ func (l *Logger) GetOrCreateGameLog(g Game) (*GameLog, string) {
 
 	gl := GameLog{ID: g.ID, Name: g.Name, Stats: StatLog{}}
 	gl.LastMoveTime = g.StartTime
-	file, err := os.OpenFile(l.Directory + g.ID + ".json", os.O_APPEND, os.ModeAppend)
+	filename := l.Directory + g.ID + ".json"
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
-		return new(GameLog), "Error opening log file: " + err.Error();
+		if os.IsNotExist(err) {
+			file, err = os.Create(filename)
+			if err != nil {
+				return new(GameLog), "Error creating new log file: " + err.Error();
+			}
+		} else {
+			return new(GameLog), "Error opening log file: " + err.Error();
+		}
 	}
 	gl.File = file
 
 	l.Games = append(l.Games, gl)
-	return &gl, ""
+	return &l.Games[len(l.Games)-1], ""
 }
 
 func (l *Logger) GetOrCreatePlayerLog(p string, g Game) *PlayerLog {
@@ -183,14 +207,14 @@ func (l *Logger) GetOrCreatePlayerLog(p string, g Game) *PlayerLog {
 	pl := PlayerLog{ID: p, Stats: StatLog{}}
 	pl.Name = g.GetPlayerByGoogleID(p).Name
 	l.Players = append(l.Players, pl)
-	return &pl
+	return &l.Players[len(l.Players)-1]
 }
 
 
 func (l *Logger) GetAllPlayersStatList(g Game, gl *GameLog) []*StatLog {
-	sl := make([]*StatLog, len(g.Players)+2, len(g.Players)+2)
+	sl := make([]*StatLog, 0, len(g.Players)+2)
 	for _, player := range g.Players {
-		pl := l.GetOrCreatePlayerLog(player.Name, g)
+		pl := l.GetOrCreatePlayerLog(player.GoogleID, g)
 		sl = append(sl, &pl.Stats)
 	}
 	sl = append(sl, &l.Stats)
@@ -206,9 +230,12 @@ func (l *Logger) CreateStatsLog() Logger {
 	lCopy.Directory = ""
 
 	// clear game file handlers
-	for index, _ := range lCopy.Games {
-		lCopy.Games[index].File = nil
+
+	newGames := make([]GameLog, len(l.Games), len(l.Games))
+	for index, gl := range lCopy.Games {
+		newGames[index] = GameLog{ID: gl.ID, Name: gl.Name, Stats: gl.Stats}
 	}
+	lCopy.Games = newGames
 	return lCopy
 }
 
@@ -231,22 +258,17 @@ func IncrementProperty(p string, stats ...*StatLog) {
 }
 
 func IncreaseProperty(p string, n int64, stats ...*StatLog) {
-	for i := range stats {
-		r := reflect.ValueOf(stats[i])
-    	f := reflect.Indirect(r).FieldByName(p)
-    	f.SetInt(f.Int() + n)
+	for i, _ := range stats {
+		f := reflect.ValueOf(*stats[i]).FieldByName(p).Int()
+		reflect.ValueOf(stats[i]).Elem().FieldByName(p).SetInt(f+n)
 	}
 }
 
 func IncrementScore(n int, stats ...*StatLog) {
 	for i := range stats {
 		if stats[i].Scores == nil {
-			stats[i].Scores = make(map[int]int)
+			stats[i].Scores = make([]int, 31, 31)
 		}
-		if _, ok := stats[i].Scores[n]; ok {
-    		stats[i].Scores[n]++;
-		} else {
-			stats[i].Scores[n] = 1;
-		}
+		stats[i].Scores[n]++;
 	}
 }
