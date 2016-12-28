@@ -9,7 +9,10 @@ import (
 func (g *Game) PopulateDeck() {
 	i := 0
 	for number, count := range numbers {
-		for _, color := range colors {
+		for _, color := range g.Colors {
+			if g.Mode == ModeHard {
+				count = 1;
+			}
 			for j := 0; j < count; j++ {
 				g.Deck[i].ID = i
 				g.Deck[i].Color = color
@@ -29,7 +32,7 @@ func (g *Game) DrawCard() Card {
 
 func (g *Game) PlayCard(c Card) bool {
 	for index, count := range g.Piles {
-		if colors[index] == c.Color {
+		if g.Colors[index] == c.Color {
 			if count+1 == c.Number {
 				// good play!
 				g.Piles[index]++

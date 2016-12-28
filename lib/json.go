@@ -15,6 +15,11 @@ type Message struct {
 	HintColor    string
 	Token        string
 	Result	 	 int
+	GameMode	 int
+	Public		 bool
+	StartingHints int
+	StartingBombs int
+	MaxHints	int
 }
 
 type MinimalGame struct {

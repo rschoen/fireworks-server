@@ -98,22 +98,24 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if command == "join" {
-		// create game if it doesn't exist
-		if game == nil {
-			game = new(lib.Game)
-			game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
-			game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
-			var initializationError = game.Initialize()
-			if initializationError != "" {
-				log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
-				fmt.Fprintf(w, jsonError("Could not initialize game."))
-				return
-			}
-			s.games = append(s.games, game)
-			log.Printf("Created new game '%s'\n", m.Game)
-		}
+	if command == "create" {
+		game = new(lib.Game)
+		game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
+		game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 
+		var initializationError = game.Initialize(m.Public, m.GameMode, m.StartingHints, m.MaxHints, m.StartingBombs)
+		if initializationError != "" {
+			log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
+			fmt.Fprintf(w, jsonError("Could not initialize game."))
+			return
+		}
+		s.games = append(s.games, game)
+		log.Printf("Created new game '%s'\n", m.Game)
+
+		command = "join"
+	}
+
+	if command == "join" {
 		player := game.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
