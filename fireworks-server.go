@@ -77,11 +77,11 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			if playerList != "" {
 				playerList = playerList[:len(playerList)-2]
 			}
-			game := lib.MinimalGame{ID: s.games[i].ID, Name: s.games[i].Name, Players: playerList}
+			game := lib.MinimalGame{ID: s.games[i].ID, Name: s.games[i].Name, Players: playerList, Mode: s.games[i].Mode}
 
 			if addGame {
 				list.PlayersGames = append(list.PlayersGames, game)
-			} else if s.games[i].State == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers {
+			} else if s.games[i].State == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers && s.games[i].Public == true {
 				list.OpenGames = append(list.OpenGames, game)
 			}
 		}

@@ -26,6 +26,7 @@ type MinimalGame struct {
 	ID      string
 	Name    string
 	Players string
+    Mode    int
 }
 
 type GamesList struct {
