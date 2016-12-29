@@ -247,6 +247,10 @@ func (g *Game) ProcessMove(mp *Message) string {
 		g.TurnsLeft--
 	}
 
+	if !g.AnyPlayableCards() {
+		g.State = StateNoPlays
+	}
+
 	return ""
 }
 

@@ -23,13 +23,14 @@ func (p *Player) ReceiveHint(i int, infoType int, hintColor string, mode int) ([
 		color = hintColor;
 	}
 	for index, _ := range p.Cards {
+		addCard := false;
 		if infoType == HintNumber && p.Cards[index].Number == number {
 			p.Cards[index].KnownNumber = number
-			changedCards = append(changedCards, p.Cards[index].ID)
+			addCard = true
 		} else if infoType == HintColor && p.Cards[index].Color == color {
 			p.Cards[index].KnownColor = color
 			addCard = true
-		} else if infoType == infoColor && (mode == ModeWildcard || mode == ModeHard) && p.Cards[index].Color == "rainbow" {
+		} else if infoType == HintColor && (mode == ModeWildcard || mode == ModeHard) && p.Cards[index].Color == "rainbow" {
 			if p.Cards[index].KnownColor == "" {
 				p.Cards[index].KnownColor = color
 			} else if p.Cards[index].KnownColor != color {
