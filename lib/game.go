@@ -217,6 +217,8 @@ func (g *Game) ProcessMove(mp *Message) string {
 		if m.HintInfoType == HintNumber {
 			p.LastMove += strconv.Itoa(hintedCard.Number) + "s"
 		} else if (g.Mode == ModeWildcard || g.Mode == ModeHard) && hintedCard.Color == "rainbow" {
+			p.LastMove += mp.HintColor + "s"
+		} else {
 			p.LastMove += hintedCard.Color + "s"
 		}
 
