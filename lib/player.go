@@ -20,10 +20,10 @@ func (p *Player) ReceiveHint(i int, infoType int, hintColor string, mode int) ([
 	number := card.Number
 	color := card.Color
 	if color == "rainbow" {
-		color = hintColor;
+		color = hintColor
 	}
 	for index, _ := range p.Cards {
-		addCard := false;
+		addCard := false
 		if infoType == HintNumber && p.Cards[index].Number == number {
 			p.Cards[index].KnownNumber = number
 			addCard = true

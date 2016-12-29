@@ -5,21 +5,21 @@ import (
 )
 
 type Message struct {
-	Game         string
-	Player       string
-	CardIndex    int
-	MoveType     int
-	HintPlayer   string
-	HintInfoType int
-	HintNumber   int
-	HintColor    string
-	Token        string
-	Result	 	 int
-	GameMode	 int
-	Public		 bool
+	Game          string
+	Player        string
+	CardIndex     int
+	MoveType      int
+	HintPlayer    string
+	HintInfoType  int
+	HintNumber    int
+	HintColor     string
+	Token         string
+	Result        int
+	GameMode      int
+	Public        bool
 	StartingHints int
 	StartingBombs int
-	MaxHints	int
+	MaxHints      int
 }
 
 type MinimalGame struct {

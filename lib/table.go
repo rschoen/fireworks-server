@@ -11,7 +11,7 @@ func (g *Game) PopulateDeck() {
 	for number, count := range numbers {
 		for _, color := range g.Colors {
 			if g.Mode == ModeHard {
-				count = 1;
+				count = 1
 			}
 			for j := 0; j < count; j++ {
 				g.Deck[i].ID = i
@@ -62,7 +62,7 @@ func (g *Game) CardPlayableOnPile(c Card) int {
 	for index, count := range g.Piles {
 		if g.Colors[index] == c.Color {
 			if count+1 == c.Number {
-				return index 
+				return index
 			} else {
 				return -1
 			}

@@ -28,7 +28,7 @@ type Game struct {
 	CardsLeft          int
 	CardsLastModified  []int
 	Type               int
-	StartTime		   int64
+	StartTime          int64
 	Mode               int
 	Colors             []string
 }

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fireworks-server/lib"
 	"flag"
 	"fmt"
-	"fireworks-server/lib"
 	"log"
 	"math/rand"
 	"net/http"
@@ -27,7 +27,6 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	var command = r.URL.Path[5:]
 
-
 	if command == "stats" {
 		json, err := lib.EncodeStatsLog(s.logger.CreateStatsLog())
 		if err != "" {
@@ -37,7 +36,6 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, json)
 		return
 	}
-
 
 	m, err := lib.DecodeMove(r.PostFormValue("data"))
 	if err != "" {
@@ -217,7 +215,7 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 
 type Server struct {
 	games           []*lib.Game
-	logger			*lib.Logger
+	logger          *lib.Logger
 	fileServer      bool
 	clientDirectory string
 }
@@ -244,7 +242,7 @@ func main() {
 	portString := ":" + strconv.Itoa(*port)
 
 	// set up the logger and reconsitute games in progress
-	s.logger = new(lib.Logger);
+	s.logger = new(lib.Logger)
 	s.logger.Directory = *logDir
 	fmt.Println("Re-constituting games in progress.")
 	games, loggerError := s.logger.Initialize()
@@ -253,8 +251,6 @@ func main() {
 	}
 	s.games = append(s.games, games...)
 	fmt.Printf("Re-constituted %d games.\n", len(games))
-
-
 
 	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))
