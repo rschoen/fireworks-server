@@ -10,7 +10,7 @@ func (g *Game) PopulateDeck() {
 	i := 0
 	for number, count := range numbers {
 		for _, color := range g.Colors {
-			if g.Mode == ModeHard {
+			if g.Mode == ModeHard && color == "rainbow" && count > 0 {
 				count = 1
 			}
 			for j := 0; j < count; j++ {

@@ -58,9 +58,14 @@ func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints
 	} else {
 		g.Colors = rainbowColors[:]
 	}
+	g.Mode = gameMode
+
 	maxCards := 0
 	for _, count := range numbers {
 		maxCards += count * len(g.Colors)
+	}
+	if g.Mode == ModeHard {
+		maxCards -= 5
 	}
 
 	// populate the Deck, Discard, and Piles
@@ -211,7 +216,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 		hintedCard := hintReceiver.GetCardByID(cardsModified[0])
 		if m.HintInfoType == HintNumber {
 			p.LastMove += strconv.Itoa(hintedCard.Number) + "s"
-		} else {
+		} else if (g.Mode == ModeWildcard || g.Mode == ModeHard) && hintedCard.Color == "rainbow" {
 			p.LastMove += hintedCard.Color + "s"
 		}
 
