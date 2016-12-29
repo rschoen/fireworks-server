@@ -76,7 +76,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 		if strings.Index(name, ".json") > -1 {
 			file, fileError := os.Open(l.Directory + name)
 			if fileError != nil {
-				return make([]*Game, 0, 0), "Error opening log file: " + fileError.Error()
+				return make([]*Game, 0, 0), "Error opening log file " + name + ": " + fileError.Error()
 			}
 			scanner := bufio.NewScanner(file)
 			var le LogEntry
@@ -86,13 +86,13 @@ func (l *Logger) Initialize() ([]*Game, string) {
 				json := scanner.Text()
 				le, decodeError = DecodeLogEntry(json)
 				if decodeError != "" {
-					return make([]*Game, 0, 0), "Error decoding log: " + decodeError
+					return make([]*Game, 0, 0), "Error decoding log " + name + ": " + decodeError
 				}
 				l.LogMove(le.Game, le.Move, le.Timestamp, false)
 			}
 
 			if err := scanner.Err(); err != nil {
-				return make([]*Game, 0, 0), "Error scanning log file: " + err.Error()
+				return make([]*Game, 0, 0), "Error scanning log file " + name + ": " + err.Error()
 			}
 			defer file.Close()
 
