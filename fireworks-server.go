@@ -66,6 +66,11 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	if command == "list" {
 		list := lib.GamesList{}
 		for i, _ := range s.games {
+		 state := s.games[i].State
+		 if state != lib.StateNotStarted && state != lib.StateStarted {
+		  continue
+		 }
+		 
 			playerList := ""
 			addGame := false
 			for player, _ := range s.games[i].Players {
@@ -81,7 +86,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 			if addGame {
 				list.PlayersGames = append(list.PlayersGames, game)
-			} else if s.games[i].State == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers && s.games[i].Public == true {
+			} else if state == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers && s.games[i].Public == true {
 				list.OpenGames = append(list.OpenGames, game)
 			}
 		}
