@@ -31,6 +31,8 @@ type Game struct {
 	StartTime          int64
 	Mode               int
 	Colors             []string
+	CurrentScore       int
+	HighestPossibleScore int
 }
 
 func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints int, startingBombs int) string {
@@ -59,14 +61,7 @@ func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints
 		g.Colors = rainbowColors[:]
 	}
 	g.Mode = gameMode
-
-	maxCards := 0
-	for _, count := range numbers {
-		maxCards += count * len(g.Colors)
-	}
-	if g.Mode == ModeHard {
-		maxCards -= 5
-	}
+	maxCards := g.MaxCards()
 
 	// populate the Deck, Discard, and Piles
 	g.Deck = make([]Card, maxCards, maxCards)
@@ -257,6 +252,9 @@ func (g *Game) ProcessMove(mp *Message) string {
 	if !g.AnyPlayableCards() {
 		g.State = StateNoPlays
 	}
+	
+	g.CurrentScore = g.Score()
+	g.HighestPossibleScore = g.GetHighestPossibleScore()
 
 	return ""
 }

@@ -58,8 +58,8 @@ func (g *Game) Score() int {
 }
 
 // returns pile index if playable, -1 if not
-func (g *Game) CardPlayableOnPile(c Card) int {
-	for index, count := range g.Piles {
+func (g *Game) CardPlayableOnCustomPile(c Card, p []int) int {
+	for index, count := range p {
 		if g.Colors[index] == c.Color {
 			if count+1 == c.Number {
 				return index
@@ -71,13 +71,21 @@ func (g *Game) CardPlayableOnPile(c Card) int {
 	return -1
 }
 
+func (g *Game) CardPlayableOnPile(c Card) int {
+	return g.CardPlayableOnCustomPile(c, g.Piles)
+}
+
 func (g *Game) AnyPlayableCards() bool {
 	if g.Turn < 15 {
 		// not possible for there to be no playable cards yet
 		return true
 	}
 
-	for _, p := range g.Players {
+	for i, _ := range g.Players {
+		if g.TurnsLeft != -1 && i > g.TurnsLeft {
+			break
+		}
+		p := g.Players[(i+g.CurrentPlayerIndex) % len(g.Players)]
 		for _, c := range p.Cards {
 			if g.CardPlayableOnPile(c) > -1 {
 				return true
@@ -92,4 +100,44 @@ func (g *Game) AnyPlayableCards() bool {
 	}
 
 	return false
+}
+
+func (g *Game) MaxCards() int {
+	maxCards := 0
+	for _, count := range numbers {
+		maxCards += count * len(g.Colors)
+	}
+	if g.Mode == ModeHard {
+		maxCards -= 5
+	}
+	return maxCards
+}
+
+func (g *Game) GetHighestPossibleScore() int {
+	score := g.Score()
+	cards := make([]Card, 0, g.MaxCards())
+	cards = append(cards, g.Deck...)
+	for _, player := range g.Players {
+		cards = append(cards, player.Cards...)
+	}
+	
+	piles := make([]int, len(g.Piles), len(g.Piles))
+	for i, value := range g.Piles {
+		piles[i] = value
+	}
+ 
+	MainLoop	:
+	for true {
+		for _, c := range cards {
+			pile := g.CardPlayableOnCustomPile(c, piles)
+			if pile > -1 {
+				piles[pile]++
+				score++
+				continue MainLoop
+			}
+		}
+		break
+	}
+	
+	return score
 }
