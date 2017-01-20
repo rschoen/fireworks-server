@@ -82,7 +82,7 @@ func (g *Game) AnyPlayableCards() bool {
 	}
 
 	for i, _ := range g.Players {
-		if g.TurnsLeft != -1 && i > g.TurnsLeft {
+		if g.TurnsLeft != -1 && i >= g.TurnsLeft {
 			break
 		}
 		p := g.Players[(i+g.CurrentPlayerIndex)%len(g.Players)]
@@ -127,6 +127,9 @@ func (g *Game) GetHighestPossibleScore() int {
 	}
 
 	turnsLeft := len(g.Deck) + len(g.Players)
+	if g.TurnsLeft > -1 && turnsLeft > g.TurnsLeft {
+		turnsLeft = g.TurnsLeft
+	}
 
 MainLoop:
 	for true {

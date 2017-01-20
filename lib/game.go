@@ -233,6 +233,14 @@ func (g *Game) ProcessMove(mp *Message) string {
 		}
 	}
 
+	g.Turn++
+	if g.TurnsLeft > 0 {
+		g.TurnsLeft--
+	}
+	if g.TurnsLeft == 0 {
+		g.State = StateDeckEmpty
+	}
+
 	if len(g.Deck) == 0 && g.TurnsLeft == -1 {
 		// Deck is empty, start the countdown
 		g.TurnsLeft = len(g.Players)
@@ -241,14 +249,6 @@ func (g *Game) ProcessMove(mp *Message) string {
 	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.CardsLastModified = cardsModified
-
-	g.Turn++
-	if g.TurnsLeft == 0 {
-		g.State = StateDeckEmpty
-	}
-	if g.TurnsLeft > 0 {
-		g.TurnsLeft--
-	}
 
 	if !g.AnyPlayableCards() {
 		g.State = StateNoPlays
