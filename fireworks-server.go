@@ -66,11 +66,11 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	if command == "list" {
 		list := lib.GamesList{}
 		for i, _ := range s.games {
-		 state := s.games[i].State
-		 if state != lib.StateNotStarted && state != lib.StateStarted {
-		  continue
-		 }
-		 
+			state := s.games[i].State
+			if state != lib.StateNotStarted && state != lib.StateStarted {
+				continue
+			}
+
 			playerList := ""
 			addGame := false
 			for player, _ := range s.games[i].Players {
@@ -117,8 +117,8 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 		command = "join"
 	}
-    
-    if game == nil {
+
+	if game == nil {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
 		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
 		return

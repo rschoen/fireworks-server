@@ -13,25 +13,25 @@ type Game struct {
 	Initialized bool
 	Public      bool
 
-	Hints              int
-	MaxHints           int
-	Bombs              int
-	Deck               []Card
-	Discard            []Card
-	Piles              []int
-	PileCards          []Card
-	CurrentPlayerIndex int
-	CurrentPlayer      string
-	State              int
-	Turn               int
-	TurnsLeft          int
-	CardsLeft          int
-	CardsLastModified  []int
-	Type               int
-	StartTime          int64
-	Mode               int
-	Colors             []string
-	CurrentScore       int
+	Hints                int
+	MaxHints             int
+	Bombs                int
+	Deck                 []Card
+	Discard              []Card
+	Piles                []int
+	PileCards            []Card
+	CurrentPlayerIndex   int
+	CurrentPlayer        string
+	State                int
+	Turn                 int
+	TurnsLeft            int
+	CardsLeft            int
+	CardsLastModified    []int
+	Type                 int
+	StartTime            int64
+	Mode                 int
+	Colors               []string
+	CurrentScore         int
 	HighestPossibleScore int
 }
 
@@ -253,7 +253,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 	if !g.AnyPlayableCards() {
 		g.State = StateNoPlays
 	}
-	
+
 	g.CurrentScore = g.Score()
 	g.HighestPossibleScore = g.GetHighestPossibleScore()
 

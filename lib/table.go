@@ -85,7 +85,7 @@ func (g *Game) AnyPlayableCards() bool {
 		if g.TurnsLeft != -1 && i > g.TurnsLeft {
 			break
 		}
-		p := g.Players[(i+g.CurrentPlayerIndex) % len(g.Players)]
+		p := g.Players[(i+g.CurrentPlayerIndex)%len(g.Players)]
 		for _, c := range p.Cards {
 			if g.CardPlayableOnPile(c) > -1 {
 				return true
@@ -120,30 +120,30 @@ func (g *Game) GetHighestPossibleScore() int {
 	for _, player := range g.Players {
 		cards = append(cards, player.Cards...)
 	}
-	
+
 	piles := make([]int, len(g.Piles), len(g.Piles))
 	for i, value := range g.Piles {
 		piles[i] = value
 	}
- 
-  turnsLeft := len(g.Deck) + len(g.Players);
-  
-	MainLoop:
+
+	turnsLeft := len(g.Deck) + len(g.Players)
+
+MainLoop:
 	for true {
 		for _, c := range cards {
 			pile := g.CardPlayableOnCustomPile(c, piles)
 			if pile > -1 {
 				piles[pile]++
 				score++
-        turnsLeft--
-        if turnsLeft == 0 {
-          break MainLoop
-        }
+				turnsLeft--
+				if turnsLeft == 0 {
+					break MainLoop
+				}
 				continue MainLoop
 			}
 		}
 		break
 	}
-	
+
 	return score
 }

@@ -35,9 +35,9 @@ type PlayerLog struct {
 }
 
 type SlicedStatLog struct {
-	Overall    StatLog
-	Modes     []StatLog
-	NumPlayers []StatLog
+	Overall         StatLog
+	Modes           []StatLog
+	NumPlayers      []StatLog
 	ModesAndPlayers [][]StatLog
 }
 
@@ -131,7 +131,7 @@ func (l *Logger) LogMove(g Game, m Message, t int64, writeToFile bool) string {
 
 	// figure out all the stats
 	pl := l.GetOrCreatePlayerLog(m.Player, g)
-	
+
 	statList := l.GetOnePlayersStatList(g, gl, pl)
 	allPlayersStatsList := l.GetAllPlayersStatList(g, gl)
 
@@ -222,7 +222,7 @@ func (l *Logger) GetOrCreatePlayerLog(p string, g Game) *PlayerLog {
 
 func (l *Logger) GetAllPlayersStatList(g Game, gl *GameLog) []*StatLog {
 	m := g.Mode
-  p := len(g.Players)
+	p := len(g.Players)
 	sl := make([]*StatLog, 0, (p+2)*4)
 	for _, player := range g.Players {
 		pl := l.GetOrCreatePlayerLog(player.GoogleID, g)
@@ -235,9 +235,9 @@ func (l *Logger) GetAllPlayersStatList(g Game, gl *GameLog) []*StatLog {
 
 func (l *Logger) GetOnePlayersStatList(g Game, gl *GameLog, pl *PlayerLog) []*StatLog {
 	m := g.Mode
-  p := len(g.Players)
+	p := len(g.Players)
 	sl := make([]*StatLog, 0, 3*4)
-	
+
 	sl = append(sl, &pl.Stats.Overall, &pl.Stats.Modes[m], &pl.Stats.NumPlayers[p], &pl.Stats.ModesAndPlayers[m][p])
 	sl = append(sl, &l.Stats.Overall, &l.Stats.Modes[m], &l.Stats.NumPlayers[p], &l.Stats.ModesAndPlayers[m][p])
 	sl = append(sl, &gl.Stats.Overall, &gl.Stats.Modes[m], &gl.Stats.NumPlayers[p], &gl.Stats.ModesAndPlayers[m][p])
@@ -287,7 +287,7 @@ func IncreaseProperty(p string, n int64, stats ...*StatLog) {
 
 func IncrementScore(n int, stats ...*StatLog) {
 	for i := range stats {
-    statLog := stats[i]
+		statLog := stats[i]
 		if statLog.Scores == nil {
 			statLog.Scores = make([]int, 31, 31)
 		}
@@ -296,15 +296,15 @@ func IncrementScore(n int, stats ...*StatLog) {
 }
 
 func CreateEmptySlicedStatLog() SlicedStatLog {
-  ssl := SlicedStatLog{}
-		
+	ssl := SlicedStatLog{}
+
 	ssl.Modes = make([]StatLog, Modes+1, Modes+1)
 	ssl.NumPlayers = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
 	ssl.ModesAndPlayers = make([][]StatLog, Modes+1, Modes+1)
-	
-  for i := 0; i <= Modes; i++ {
+
+	for i := 0; i <= Modes; i++ {
 		ssl.ModesAndPlayers[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
 	}
-  
-  return ssl
+
+	return ssl
 }
