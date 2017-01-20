@@ -81,6 +81,7 @@ func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints
 	// start with no Players
 	g.Players = make([]Player, 0, len(cardsInHand)-1)
 	g.Initialized = true
+	g.HighestPossibleScore = g.GetHighestPossibleScore()
 	return ""
 }
 

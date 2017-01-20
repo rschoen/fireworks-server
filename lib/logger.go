@@ -62,7 +62,7 @@ type StatLog struct {
 func (l *Logger) Initialize() ([]*Game, string) {
 	l.Games = make([]GameLog, 0, MaxStoredGames)
 	l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
-	l.CreateEmptySlicedStatLog(&l.Stats)
+	l.Stats = CreateEmptySlicedStatLog()
 
 	err := os.Mkdir(l.Directory, os.ModeDir|os.ModePerm)
 	if err != nil && !os.IsExist(err) {
@@ -186,7 +186,7 @@ func (l *Logger) GetOrCreateGameLog(g Game) (*GameLog, string) {
 	}
 
 	gl := GameLog{ID: g.ID, Name: g.Name, Stats: SlicedStatLog{}}
-	l.CreateEmptySlicedStatLog(&gl.Stats)
+	gl.Stats = CreateEmptySlicedStatLog()
 	gl.LastMoveTime = g.StartTime
 	filename := l.Directory + g.ID + ".json"
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0600)
@@ -214,7 +214,7 @@ func (l *Logger) GetOrCreatePlayerLog(p string, g Game) *PlayerLog {
 	}
 
 	pl := PlayerLog{ID: p, Stats: SlicedStatLog{}}
-	l.CreateEmptySlicedStatLog(pl.Stats)
+	pl.Stats = CreateEmptySlicedStatLog()
 	pl.Name = g.GetPlayerByGoogleID(p).Name
 	l.Players = append(l.Players, pl)
 	return &l.Players[len(l.Players)-1]
@@ -222,25 +222,25 @@ func (l *Logger) GetOrCreatePlayerLog(p string, g Game) *PlayerLog {
 
 func (l *Logger) GetAllPlayersStatList(g Game, gl *GameLog) []*StatLog {
 	m := g.Mode
-	p = len(g.Players)
-	sl := make([]*SlicedStatLog, 0, (p+2)*4)
+  p := len(g.Players)
+	sl := make([]*StatLog, 0, (p+2)*4)
 	for _, player := range g.Players {
 		pl := l.GetOrCreatePlayerLog(player.GoogleID, g)
-		sl = append(sl, &pl.Stats.Overall, &pl.Stats.Modes[m], &pl.Stats.NumPlayers[p], &pl.Stats.ModeAndPlayers[m][p])
+		sl = append(sl, &pl.Stats.Overall, &pl.Stats.Modes[m], &pl.Stats.NumPlayers[p], &pl.Stats.ModesAndPlayers[m][p])
 	}
-	sl = append(sl, &l.Stats.Overall, &l.Stats.Modes[m], &l.Stats.NumPlayers[p], &l.Stats.ModeAndPlayers[m][p])
-	sl = append(sl, &gl.Stats.Overall, &gl.Stats.Modes[m], &gl.Stats.NumPlayers[p], &gl.Stats.ModeAndPlayers[m][p])
+	sl = append(sl, &l.Stats.Overall, &l.Stats.Modes[m], &l.Stats.NumPlayers[p], &l.Stats.ModesAndPlayers[m][p])
+	sl = append(sl, &gl.Stats.Overall, &gl.Stats.Modes[m], &gl.Stats.NumPlayers[p], &gl.Stats.ModesAndPlayers[m][p])
 	return sl
 }
 
 func (l *Logger) GetOnePlayersStatList(g Game, gl *GameLog, pl *PlayerLog) []*StatLog {
 	m := g.Mode
-	p = len(g.Players)
-	sl := make([]*SlicedStatLog, 0, 3*4)
+  p := len(g.Players)
+	sl := make([]*StatLog, 0, 3*4)
 	
-	sl = append(sl, &pl.Stats.Overall, &pl.Stats.Modes[m], &pl.Stats.NumPlayers[p], &pl.Stats.ModeAndPlayers[m][p])
-	sl = append(sl, &l.Stats.Overall, &l.Stats.Modes[m], &l.Stats.NumPlayers[p], &l.Stats.ModeAndPlayers[m][p])
-	sl = append(sl, &gl.Stats.Overall, &gl.Stats.Modes[m], &gl.Stats.NumPlayers[p], &gl.Stats.ModeAndPlayers[m][p])
+	sl = append(sl, &pl.Stats.Overall, &pl.Stats.Modes[m], &pl.Stats.NumPlayers[p], &pl.Stats.ModesAndPlayers[m][p])
+	sl = append(sl, &l.Stats.Overall, &l.Stats.Modes[m], &l.Stats.NumPlayers[p], &l.Stats.ModesAndPlayers[m][p])
+	sl = append(sl, &gl.Stats.Overall, &gl.Stats.Modes[m], &gl.Stats.NumPlayers[p], &gl.Stats.ModesAndPlayers[m][p])
 	return sl
 }
 
@@ -259,7 +259,7 @@ func (l *Logger) CreateStatsLog() Logger {
 	}
 	lCopy.Games = newGames
 	return lCopy
-/}
+}
 
 func (gl *GameLog) LogMove(le LogEntry) string {
 	json, encodeError := EncodeLogEntry(le)
@@ -273,22 +273,21 @@ func (gl *GameLog) LogMove(le LogEntry) string {
 	return ""
 }
 
-func IncrementProperty(mode int, players int, p string, stats ...*SlicedStatLog) {
+func IncrementProperty(p string, stats ...*StatLog) {
 	IncreaseProperty(p, 1, stats...)
 }
 
-func IncreaseProperty(p string, n int64, stats ...*SlicedStatLog) {
+func IncreaseProperty(p string, n int64, stats ...*StatLog) {
 	for i, _ := range stats {
 		statLog := stats[i]
 		f := reflect.ValueOf(*statLog).FieldByName(p).Int()
 		reflect.ValueOf(statLog).Elem().FieldByName(p).SetInt(f + n)
-		}
 	}
 }
 
 func IncrementScore(n int, stats ...*StatLog) {
 	for i := range stats {
-		statLog = stats[i]
+    statLog := stats[i]
 		if statLog.Scores == nil {
 			statLog.Scores = make([]int, 31, 31)
 		}
@@ -296,14 +295,16 @@ func IncrementScore(n int, stats ...*StatLog) {
 	}
 }
 
-func CreateEmptySlicedStatLog(ssl* SlicedStatLog) {
-	ssl = new SlicedStatLog{}
+func CreateEmptySlicedStatLog() SlicedStatLog {
+  ssl := SlicedStatLog{}
 		
 	ssl.Modes = make([]StatLog, Modes+1, Modes+1)
 	ssl.NumPlayers = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
 	ssl.ModesAndPlayers = make([][]StatLog, Modes+1, Modes+1)
 	
-	for i := range Modes+1 {
+  for i := 0; i <= Modes; i++ {
 		ssl.ModesAndPlayers[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
 	}
+  
+  return ssl
 }
