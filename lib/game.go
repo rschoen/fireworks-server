@@ -237,7 +237,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 	if g.TurnsLeft > 0 {
 		g.TurnsLeft--
 	}
-	if g.TurnsLeft == 0 {
+	if g.State == StateStarted && g.TurnsLeft == 0 {
 		g.State = StateDeckEmpty
 	}
 
