@@ -132,7 +132,7 @@ func (g *Game) GetHighestPossibleScore() int {
 	}
 
 MainLoop:
-	for true {
+	for turnsLeft > 0 {
 		for _, c := range cards {
 			pile := g.CardPlayableOnCustomPile(c, piles)
 			if pile > -1 {
