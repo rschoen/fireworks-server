@@ -250,7 +250,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
 	g.CardsLastModified = cardsModified
 
-	if !g.AnyPlayableCards() {
+	if g.State == StateStarted && !g.AnyPlayableCards() {
 		g.State = StateNoPlays
 	}
 
