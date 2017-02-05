@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -80,6 +81,11 @@ func (l *Logger) Initialize() ([]*Game, string) {
 	}
 
 	games := make([]*Game, 0, MaxConcurrentGames)
+	statusUpdates := 5
+	filesPerUpdate := len(names) / statusUpdates
+	filesProcessed := 0
+	nextUpdate := filesPerUpdate
+
 	for _, name := range names {
 		if strings.Index(name, ".json") > -1 {
 			file, fileError := os.Open(l.Directory + name)
@@ -106,6 +112,12 @@ func (l *Logger) Initialize() ([]*Game, string) {
 
 			if le.Game.State == StateNotStarted || le.Game.State == StateStarted {
 				games = append(games, &le.Game)
+			}
+
+			filesProcessed++
+			if filesProcessed >= nextUpdate {
+				fmt.Printf("Processing games is %d%% complete.\n", int(100.0*filesProcessed/len(names)))
+				nextUpdate += filesPerUpdate
 			}
 		}
 	}
