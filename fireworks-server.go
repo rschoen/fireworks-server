@@ -51,14 +51,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Authenticate user
-	authResponse, authError := lib.Authenticate(m.Token)
+	authResponse, authError := s.auth.Authenticate(m.Token)
 	if authError != "" {
 		log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
 		fmt.Fprintf(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
 		return
 	}
 	if authResponse.GetGoogleID() != m.Player {
-		log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game, m.Game)
+		log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game)
 		fmt.Fprintf(w, jsonError("Authenticated as a different user."))
 		return
 	}
@@ -217,6 +217,7 @@ type Server struct {
 	logger          *lib.Logger
 	fileServer      bool
 	clientDirectory string
+	auth            lib.Authenticator
 }
 
 func main() {
@@ -225,6 +226,7 @@ func main() {
 	// initialize server
 	s := Server{}
 	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
+	s.auth.Initialize()
 
 	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
 	https := flag.Bool("https", false, "Whether to serve everything over HTTPS instead of HTTP")
