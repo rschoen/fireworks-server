@@ -187,6 +187,13 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
+	if command == "status" {
+		if m.LastTurn == game.Turn {
+			fmt.Fprintf(w, "")
+			return
+		}
+	}
+
 	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)

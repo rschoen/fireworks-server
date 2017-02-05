@@ -20,6 +20,7 @@ type Message struct {
 	StartingHints int
 	StartingBombs int
 	MaxHints      int
+	LastTurn      int
 }
 
 type MinimalGame struct {
