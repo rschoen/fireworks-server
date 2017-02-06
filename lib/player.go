@@ -1,10 +1,11 @@
 package lib
 
 type Player struct {
-	GoogleID string
-	Name     string
-	Cards    []Card
-	LastMove string
+	GoogleID  string
+	PushToken string
+	Name      string
+	Cards     []Card
+	LastMove  string
 }
 
 func (p *Player) Initialize(maxCards int) {

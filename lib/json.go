@@ -14,6 +14,7 @@ type Message struct {
 	HintNumber    int
 	HintColor     string
 	Token         string
+	PushToken     string
 	Result        int
 	GameMode      int
 	Public        bool

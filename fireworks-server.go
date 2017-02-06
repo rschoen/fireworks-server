@@ -184,6 +184,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, jsonError("Could not log move."))
 			return
 		}
+		player.PushToken = m.PushToken
 		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 

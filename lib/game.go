@@ -1,6 +1,8 @@
 package lib
 
 import (
+	"fmt"
+	"github.com/NaySoftware/go-fcm"
 	"math/rand"
 	"strconv"
 	"time"
@@ -131,6 +133,7 @@ func (g *Game) Start() string {
 	g.State = StateStarted
 	g.StartTime = time.Now().Unix()
 	g.Turn++
+	g.SendCurrentPlayerNotification()
 
 	return ""
 }
@@ -248,6 +251,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 
 	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
 	g.CurrentPlayer = g.Players[g.CurrentPlayerIndex].GoogleID
+	g.SendCurrentPlayerNotification()
 	g.CardsLastModified = cardsModified
 
 	if g.State == StateStarted && !g.AnyPlayableCards() {
@@ -299,4 +303,34 @@ func (g *Game) GetPlayerByGoogleID(id string) *Player {
 		}
 	}
 	return p
+}
+
+func (g *Game) SendCurrentPlayerNotification() {
+	token := g.GetPlayerByGoogleID(g.CurrentPlayer).PushToken
+	if token == "" {
+		return
+	}
+
+	data := map[string]string{
+		"msg": "Other players are waiting! Take your turn.",
+		"sum": "Fireworks - it's your turn!",
+	}
+
+	c := fcm.NewFcmClient(PushServerKey)
+	c.NewFcmRegIdsMsg([]string{token}, data)
+
+	n := fcm.NotificationPayload{}
+	n.Title = "Fireworks - it's your turn!"
+	n.Body = "Other players are waiting! Take your turn."
+	n.ClickAction = "https://ryanschoen.com/fireworks/#!/games/" + g.ID
+	n.Icon = "https://ryanschoen.com/images/icons/fireworks128.png"
+	c.SetNotificationPayload(&n)
+
+	status, err := c.Send()
+
+	if err == nil {
+		status.PrintResults()
+	} else {
+		fmt.Println(err)
+	}
 }
