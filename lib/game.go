@@ -323,14 +323,12 @@ func (g *Game) SendCurrentPlayerNotification() {
 	n.Title = "Fireworks - it's your turn!"
 	n.Body = "Other players are waiting! Take your turn."
 	n.ClickAction = "https://ryanschoen.com/fireworks/#!/games/" + g.ID
-	n.Icon = "https://ryanschoen.com/images/icons/fireworks128.png"
+	n.Icon = "https://ryanschoen.com/fireworks/images/icons/fireworks128.png"
 	c.SetNotificationPayload(&n)
 
-	status, err := c.Send()
+	_, err := c.Send()
 
-	if err == nil {
-		status.PrintResults()
-	} else {
+	if err != nil {
 		fmt.Println(err)
 	}
 }
