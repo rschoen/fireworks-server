@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var VERSION = "1.0.0"
+
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -26,7 +28,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var command = r.URL.Path[5:]
-
+	if command == "version" {
+		fmt.Fprintf(w, VERSION)
+		return
+	}
 	if command == "stats" {
 		json, err := lib.EncodeStatsLog(s.logger.CreateStatsLog())
 		if err != "" {
