@@ -15,6 +15,11 @@ type Logger struct {
 	Directory string
 }
 
+type LoggerMessage struct {
+	Players []PlayerLog
+	Stats   SlicedStatLog
+}
+
 type LogEntry struct {
 	Timestamp int64
 	Game      Game
