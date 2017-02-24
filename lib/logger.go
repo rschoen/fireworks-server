@@ -48,7 +48,8 @@ type SlicedStatLog struct {
 }
 
 type StatLog struct {
-	Moves         int64
+	Turns         int64
+	TimedTurns    int64
 	Plays         int64
 	Bombs         int64
 	Discards      int64
@@ -152,8 +153,12 @@ func (l *Logger) LogMove(g Game, m Message, t int64, writeToFile bool) string {
 	statList := l.GetOnePlayersStatList(g, gl, pl)
 	allPlayersStatsList := l.GetAllPlayersStatList(g, gl)
 
-	IncrementProperty("Moves", statList[:]...)
-	IncreaseProperty("TurnTime", t-gl.LastMoveTime, statList[:]...)
+	IncrementProperty("Turns", statList[:]...)
+
+	if !g.IgnoreTime {
+		IncrementProperty("TimedTurns", statList[:]...)
+		IncreaseProperty("TurnTime", t-gl.LastMoveTime, statList[:]...)
+	}
 
 	if m.MoveType == MovePlay && m.Result == ResultPlay {
 		IncrementProperty("Plays", statList[:]...)
@@ -184,7 +189,9 @@ func (l *Logger) LogMove(g Game, m Message, t int64, writeToFile bool) string {
 
 	if g.State == StateBombedOut || g.State == StateDeckEmpty || g.State == StateNoPlays || g.State == StatePerfect {
 		IncrementProperty("FinishedGames", allPlayersStatsList[:]...)
-		IncreaseProperty("GameTime", t-g.StartTime, allPlayersStatsList[:]...)
+		if !g.IgnoreTime {
+			IncreaseProperty("GameTime", t-g.StartTime, allPlayersStatsList[:]...)
+		}
 		IncrementScore(g.Score(), allPlayersStatsList[:]...)
 
 		defer gl.File.Close()

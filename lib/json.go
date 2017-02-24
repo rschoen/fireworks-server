@@ -22,6 +22,7 @@ type Message struct {
 	StartingBombs int
 	MaxHints      int
 	LastTurn      int
+	IgnoreTime    bool
 }
 
 type MinimalGame struct {

@@ -14,6 +14,7 @@ type Game struct {
 	Players     []Player
 	Initialized bool
 	Public      bool
+	IgnoreTime  bool
 
 	Hints                int
 	MaxHints             int
@@ -37,7 +38,7 @@ type Game struct {
 	HighestPossibleScore int
 }
 
-func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints int, startingBombs int) string {
+func (g *Game) Initialize(public bool, ignoreTime bool, gameMode int, startingHints int, maxHints int, startingBombs int) string {
 	g.State = StateNotStarted
 
 	// validate input
@@ -73,6 +74,7 @@ func (g *Game) Initialize(public bool, gameMode int, startingHints int, maxHints
 
 	// set starting values
 	g.Public = public
+	g.IgnoreTime = ignoreTime
 	g.Mode = gameMode
 	g.Hints = startingHints
 	g.MaxHints = maxHints
