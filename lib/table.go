@@ -10,7 +10,7 @@ func (g *Game) PopulateDeck() {
 	i := 0
 	for number, count := range numbers {
 		for _, color := range g.Colors {
-			if g.Mode == ModeHard && color == "rainbow" && count > 0 {
+			if (g.Mode == ModeHard || g.Mode == ModeRainbowLimited) && color == "rainbow" && count > 0 {
 				count = 1
 			}
 			for j := 0; j < count; j++ {
@@ -107,7 +107,7 @@ func (g *Game) MaxCards() int {
 	for _, count := range numbers {
 		maxCards += count * len(g.Colors)
 	}
-	if g.Mode == ModeHard {
+	if g.Mode == ModeHard || g.Mode == ModeRainbowLimited {
 		maxCards -= 5
 	}
 	return maxCards

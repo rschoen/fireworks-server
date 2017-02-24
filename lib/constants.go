@@ -18,6 +18,7 @@ const ModeNormal = 1
 const ModeRainbow = 2
 const ModeWildcard = 3
 const ModeHard = 4
+const ModeRainbowLimited = 5
 const Modes = 4
 
 const ResultOther = 0

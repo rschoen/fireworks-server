@@ -53,7 +53,7 @@ func (g *Game) Initialize(public bool, ignoreTime bool, gameMode int, startingHi
 		startingBombs = DefaultStartingBombs
 	}
 
-	if gameMode != ModeNormal && gameMode != ModeRainbow && gameMode != ModeWildcard && gameMode != ModeHard {
+	if gameMode != ModeNormal && gameMode != ModeRainbow && gameMode != ModeWildcard && gameMode != ModeHard && gameMode != ModeRainbowLimited {
 		gameMode = ModeNormal
 	}
 
