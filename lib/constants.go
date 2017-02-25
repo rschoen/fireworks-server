@@ -19,7 +19,7 @@ const ModeRainbow = 2
 const ModeWildcard = 3
 const ModeHard = 4
 const ModeRainbowLimited = 5
-const Modes = 4
+const Modes = 5
 
 const ResultOther = 0
 const ResultPlay = 1
