@@ -172,6 +172,16 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Started game '%s'\n", m.Game)
 	}
 
+	if command == "announce" {
+		var processError = game.ProcessAnnouncement(&m)
+		if processError != "" {
+			log.Printf("Failed to process announcement for game '%s'. Error: %s\n", m.Game, processError)
+			fmt.Fprintf(w, jsonError("Could not process announcement."))
+			return
+		}
+		log.Printf("Processed announcement by player '%s' in game '%s'\n", m.Player, m.Game)
+	}
+
 	if command == "move" {
 		if m.MoveType == lib.MoveHint && game.Hints <= 0 {
 			fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))

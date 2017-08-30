@@ -23,6 +23,7 @@ type Message struct {
 	MaxHints      int
 	LastTurn      int
 	IgnoreTime    bool
+	Announcement  string
 }
 
 type MinimalGame struct {

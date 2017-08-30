@@ -5,6 +5,7 @@ import (
 	"github.com/NaySoftware/go-fcm"
 	"math/rand"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -137,6 +138,25 @@ func (g *Game) Start() string {
 	g.Turn++
 	g.SendCurrentPlayerNotification()
 
+	return ""
+}
+
+func (g *Game) ProcessAnnouncement(mp *Message) string {
+	m := *mp
+	if g.State != StateStarted {
+		return "Attempting to process an announcement for a non-ongoing game."
+	}
+	p := g.GetPlayerByGoogleID(m.Player)
+	if p == nil {
+		return "Attempting to process an announcement for a nonexistent player."
+	}
+
+	// TODO: protect against code injection
+
+	// Strip old announcement, append new announcement to last move
+	p.LastMove = strings.Split(p.LastMove, ":")[0] + ": " + m.Announcement
+
+	// success:
 	return ""
 }
 
