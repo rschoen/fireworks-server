@@ -143,7 +143,7 @@ func (g *Game) Start() string {
 }
 
 //Wrapper in case we ever need a global time stamp to coordinate amongst distributed servers
-func _getCurrentTime() int64 {
+func getCurrentTime() int64 {
 	return time.Now().Unix()
 }
 
@@ -161,7 +161,7 @@ func (g *Game) ProcessAnnouncement(mp *Message) string {
 
 	// make announcement:
 	p.LastMove = ": " + m.Announcement
-	g.UpdateTime = _getCurrentTime()
+	g.UpdateTime = getCurrentTime()
 
 	// success:
 	return ""
