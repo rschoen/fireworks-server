@@ -204,7 +204,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "status" {
-		if m.LastTurn == game.Turn {
+		if m.LastTurn == game.Turn && m.UpdateTime == game.UpdateTime {
 			fmt.Fprintf(w, "")
 			return
 		}

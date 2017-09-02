@@ -5,7 +5,6 @@ import (
 	"github.com/NaySoftware/go-fcm"
 	"math/rand"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -27,6 +26,7 @@ type Game struct {
 	CurrentPlayerIndex   int
 	CurrentPlayer        string
 	State                int
+	UpdateTime           int64
 	Turn                 int
 	TurnsLeft            int
 	CardsLeft            int
@@ -82,6 +82,7 @@ func (g *Game) Initialize(public bool, ignoreTime bool, gameMode int, startingHi
 	g.Bombs = startingBombs
 	g.TurnsLeft = -1
 	g.Turn = 0
+	g.UpdateTime = -1
 
 	// start with no Players
 	g.Players = make([]Player, 0, len(cardsInHand)-1)
@@ -141,6 +142,11 @@ func (g *Game) Start() string {
 	return ""
 }
 
+//Wrapper in case we ever need a global time stamp to coordinate amongst distributed servers
+func _getCurrentTime() int64 {
+	return time.Now().Unix()
+}
+
 func (g *Game) ProcessAnnouncement(mp *Message) string {
 	m := *mp
 	if g.State != StateStarted {
@@ -153,8 +159,9 @@ func (g *Game) ProcessAnnouncement(mp *Message) string {
 
 	// TODO: protect against code injection
 
-	// Strip old announcement, append new announcement to last move
-	p.LastMove = strings.Split(p.LastMove, ":")[0] + ": " + m.Announcement
+	// make announcement:
+	p.LastMove = ": " + m.Announcement
+	g.UpdateTime = _getCurrentTime()
 
 	// success:
 	return ""

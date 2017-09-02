@@ -22,6 +22,7 @@ type Message struct {
 	StartingBombs int
 	MaxHints      int
 	LastTurn      int
+	UpdateTime    int64
 	IgnoreTime    bool
 	Announcement  string
 }
