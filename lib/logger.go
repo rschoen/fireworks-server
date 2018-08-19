@@ -86,8 +86,9 @@ func (l *Logger) Initialize() ([]*Game, string) {
 		return make([]*Game, 0, 0), "Error reading log directory: " + readError.Error()
 	}
 
+	fmt.Printf("Found %'d games.\n", len(names))
 	games := make([]*Game, 0, MaxConcurrentGames)
-	statusUpdates := 5
+	statusUpdates := 10
 	filesPerUpdate := len(names) / statusUpdates
 	filesProcessed := 0
 	nextUpdate := filesPerUpdate
@@ -114,7 +115,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 			if err := scanner.Err(); err != nil {
 				return make([]*Game, 0, 0), "Error scanning log file " + name + ": " + err.Error()
 			}
-			defer file.Close()
+			file.Close()
 
 			if le.Game.State == StateNotStarted || le.Game.State == StateStarted {
 				games = append(games, &le.Game)
@@ -122,7 +123,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 
 			filesProcessed++
 			if filesProcessed >= nextUpdate {
-				fmt.Printf("Processing games is %d%% complete.\n", int(100.0*filesProcessed/len(names)))
+				fmt.Printf("Processed %'d games. %d%% complete.\n", filesProcessed, int(100.0*filesProcessed/len(names)))
 				nextUpdate += filesPerUpdate
 			}
 		}
