@@ -109,7 +109,10 @@ func (l *Logger) Initialize() ([]*Game, string) {
 				if decodeError != "" {
 					return make([]*Game, 0, 0), "Error decoding log " + name + ": " + decodeError
 				}
-				l.LogMove(le.Game, le.Move, le.Timestamp, false)
+				err := l.LogMove(le.Game, le.Move, le.Timestamp, false)
+				if err != "" {
+					return make([]*Game, 0, 0), "Error logging move in game " + name + ": " + err
+				}
 			}
 
 			if err := scanner.Err(); err != nil {
