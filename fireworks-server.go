@@ -7,7 +7,9 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"regexp"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"time"
@@ -248,7 +250,17 @@ func main() {
 	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if using --http")
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
 	logDir := flag.String("logdir", lib.DefaultLogDirectory, "Path to log directory, defaults to ./log/")
+	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	flag.Parse()
+	
+	if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.StartCPUProfile(f)
+        defer pprof.StopCPUProfile()
+    }
 
 	s.fileServer = *fileServer
 	s.clientDirectory = *clientDirectory
