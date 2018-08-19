@@ -95,3 +95,23 @@ func EncodeStatsLog(l Logger) (string, string) {
 
 	return string(b), ""
 }
+
+func EncodeWholeStatsLog(l* Logger) (string, string) {
+	b, err := json.Marshal(l)
+	if err != nil {
+		return "", "Error encoding stats log to JSON string: " + err.Error()
+	}
+
+	return string(b), ""
+}
+
+func DecodeWholeStatsLog(s string) (Logger, string) {
+	b := []byte(s)
+	var l Logger
+	err := json.Unmarshal(b, &l)
+	if err != nil {
+		return Logger{}, "Error decoding stat logger from JSON string.\nDecoding string: " + s + "\nError: " + err.Error()
+	}
+
+	return l, ""
+}

@@ -39,6 +39,7 @@ const DefaultPort = 8080
 const DefaultCertificate = "server.crt"
 const DefaultKey = "server.key"
 const DefaultLogDirectory = "log/"
+const StatsFile = "stats.json"
 
 const DefaultMaxHints = 8
 const DefaultStartingHints = 8

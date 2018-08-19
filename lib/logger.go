@@ -9,10 +9,11 @@ import (
 )
 
 type Logger struct {
-	Games     []GameLog
-	Players   []PlayerLog
-	Stats     SlicedStatLog
-	Directory string
+	Games        []GameLog
+	Players      []PlayerLog
+	Stats        SlicedStatLog
+	Directory    string
+	LastMoveTime int64
 }
 
 type LoggerMessage struct {
@@ -66,7 +67,7 @@ type StatLog struct {
 	Scores        []int
 }
 
-func (l *Logger) Initialize() ([]*Game, string) {
+func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
 	l.Games = make([]GameLog, 0, MaxStoredGames)
 	l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
 	l.Stats = CreateEmptySlicedStatLog()
@@ -94,7 +95,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 	nextUpdate := filesPerUpdate
 
 	for _, name := range names {
-		if strings.Index(name, ".json") > -1 {
+		if strings.Index(name, ".json") > -1 && name != StatsFile {
 			file, fileError := os.Open(l.Directory + name)
 			if fileError != nil {
 				return make([]*Game, 0, 0), "Error opening log file " + name + ": " + fileError.Error()
@@ -132,6 +133,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 		}
 	}
 
+	l.DumpToFile()
 	return games, ""
 }
 
@@ -202,6 +204,9 @@ func (l *Logger) LogMove(g Game, m Message, t int64, writeToFile bool) string {
 	}
 
 	gl.LastMoveTime = t
+	if t > l.LastMoveTime {
+		l.LastMoveTime = t
+	}
 
 	return ""
 }
@@ -335,4 +340,21 @@ func CreateEmptySlicedStatLog() SlicedStatLog {
 	}
 
 	return ssl
+}
+
+func (l* Logger) DumpToFile() string {
+	filename := l.Directory + StatsFile
+	file, err := os.Create(filename)
+	if err != nil {
+		return "Error dumping stats log file: " + err.Error()
+	}
+	json, encodeError := EncodeWholeStatsLog(l)
+	if encodeError != "" {
+		return "Error encoding stats logger to JSON: " + encodeError
+	}
+	_, writeErr := file.WriteString(json)
+	if writeErr != nil {
+		return "Error writing stats logger dump: " + err.Error()
+	}
+	return ""
 }

@@ -251,6 +251,7 @@ func main() {
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
 	logDir := flag.String("logdir", lib.DefaultLogDirectory, "Path to log directory, defaults to ./log/")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
+	regenStats := flag.Bool("regenerate-stats", false, "Whether to completely regenerate game statistics")
 	flag.Parse()
 	
 	if *cpuprofile != "" {
@@ -271,7 +272,7 @@ func main() {
 	s.logger = new(lib.Logger)
 	s.logger.Directory = *logDir
 	fmt.Println("Re-constituting games in progress.")
-	games, loggerError := s.logger.Initialize()
+	games, loggerError := s.logger.Initialize(*regenStats)
 	if loggerError != "" {
 		log.Fatal("Failed to initialize logger. Error: " + loggerError)
 	}
