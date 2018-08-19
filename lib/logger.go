@@ -86,9 +86,9 @@ func (l *Logger) Initialize() ([]*Game, string) {
 		return make([]*Game, 0, 0), "Error reading log directory: " + readError.Error()
 	}
 
-	fmt.Printf("Found %'d games.\n", len(names))
+	fmt.Printf("Found %d games.\n", len(names))
 	games := make([]*Game, 0, MaxConcurrentGames)
-	statusUpdates := 10
+	statusUpdates := 9
 	filesPerUpdate := len(names) / statusUpdates
 	filesProcessed := 0
 	nextUpdate := filesPerUpdate
@@ -123,7 +123,7 @@ func (l *Logger) Initialize() ([]*Game, string) {
 
 			filesProcessed++
 			if filesProcessed >= nextUpdate {
-				fmt.Printf("Processed %'d games. %d%% complete.\n", filesProcessed, int(100.0*filesProcessed/len(names)))
+				fmt.Printf("Processed %d games. %d%% complete.\n", filesProcessed, int(100.0*filesProcessed/len(names)))
 				nextUpdate += filesPerUpdate
 			}
 		}
