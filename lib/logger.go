@@ -3,6 +3,7 @@ package lib
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 	"strings"
@@ -14,6 +15,7 @@ type Logger struct {
 	Stats        SlicedStatLog
 	Directory    string
 	LastMoveTime int64
+	Initialized  bool
 }
 
 type LoggerMessage struct {
@@ -68,9 +70,36 @@ type StatLog struct {
 }
 
 func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
-	l.Games = make([]GameLog, 0, MaxStoredGames)
-	l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
-	l.Stats = CreateEmptySlicedStatLog()
+	// if we're regenerating stats, zero everything out
+	if regenStats {
+		l.Games = make([]GameLog, 0, MaxStoredGames)
+		l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
+		l.Stats = CreateEmptySlicedStatLog()
+	} else {
+		// otherwise, open up the stats file and load it in
+		b, fileError := ioutil.ReadFile(l.Directory + StatsFile)
+		if fileError != nil {
+			if os.IsNotExist(fileError) {
+				l.Games = make([]GameLog, 0, MaxStoredGames)
+				l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
+				l.Stats = CreateEmptySlicedStatLog()
+			} else {
+				return make([]*Game, 0, 0), "Error opening stats log file " + StatsFile + ": " + fileError.Error()
+			}
+		} else {
+			savedLogger, decodeError := DecodeWholeStatsLog(string(b))
+			if decodeError != "" {
+				return make([]*Game, 0, 0), "Error decoding stats log file " + StatsFile + ": " + decodeError
+			}
+			l.Games = savedLogger.Games
+			l.Players = savedLogger.Players
+			l.Stats = savedLogger.Stats
+			l.LastMoveTime = savedLogger.LastMoveTime
+		}
+	}
+
+	// if we have a reinflated stats file, only log moves after it was saved
+	onlyCountMovesAfter := l.LastMoveTime
 
 	err := os.Mkdir(l.Directory, os.ModeDir|os.ModePerm)
 	if err != nil && !os.IsExist(err) {
@@ -95,7 +124,11 @@ func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
 	nextUpdate := filesPerUpdate
 
 	for _, name := range names {
-		if strings.Index(name, ".json") > -1 && name != StatsFile {
+		// let's check that
+		// 1) it's a real file
+		// 2) it's not the overall stats logger file
+		// 3) it's NOT final (aka this is a game in progress) OR we're regenerating stats so go for it
+		if strings.Index(name, ".json") > -1 && name != StatsFile && (strings.Index(name, ".final.json") == -1 || regenStats) {
 			file, fileError := os.Open(l.Directory + name)
 			if fileError != nil {
 				return make([]*Game, 0, 0), "Error opening log file " + name + ": " + fileError.Error()
@@ -110,9 +143,12 @@ func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
 				if decodeError != "" {
 					return make([]*Game, 0, 0), "Error decoding log " + name + ": " + decodeError
 				}
-				err := l.LogMove(le.Game, le.Move, le.Timestamp, false)
-				if err != "" {
-					return make([]*Game, 0, 0), "Error logging move in game " + name + ": " + err
+				// make sure the move is not already included in our saved stats file
+				if le.Timestamp > onlyCountMovesAfter {
+					err := l.LogMove(le.Game, le.Move, le.Timestamp, false)
+					if err != "" {
+						return make([]*Game, 0, 0), "Error logging move in game " + name + ": " + err
+					}
 				}
 			}
 
@@ -121,8 +157,16 @@ func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
 			}
 			file.Close()
 
+			// game is in progress! load it in
 			if le.Game.State == StateNotStarted || le.Game.State == StateStarted {
 				games = append(games, &le.Game)
+			} else if strings.Index(name, ".final.json") == -1 {
+				// game is finished, so let's mark it as final so we skip it later
+				newName := strings.Replace(name, ".json", "", -1) + ".final.json"
+				renameErr := os.Rename(l.Directory+name, l.Directory+newName)
+				if renameErr != nil {
+					return make([]*Game, 0, 0), "Error renaming " + name + " to " + newName + ": " + renameErr.Error()
+				}
 			}
 
 			filesProcessed++
@@ -342,7 +386,7 @@ func CreateEmptySlicedStatLog() SlicedStatLog {
 	return ssl
 }
 
-func (l* Logger) DumpToFile() string {
+func (l *Logger) DumpToFile() string {
 	filename := l.Directory + StatsFile
 	file, err := os.Create(filename)
 	if err != nil {

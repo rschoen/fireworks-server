@@ -96,7 +96,7 @@ func EncodeStatsLog(l Logger) (string, string) {
 	return string(b), ""
 }
 
-func EncodeWholeStatsLog(l* Logger) (string, string) {
+func EncodeWholeStatsLog(l *Logger) (string, string) {
 	b, err := json.Marshal(l)
 	if err != nil {
 		return "", "Error encoding stats log to JSON string: " + err.Error()

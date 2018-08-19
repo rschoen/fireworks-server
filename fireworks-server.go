@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var VERSION = "1.0.3"
+var VERSION = "1.0.4"
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
@@ -253,15 +253,15 @@ func main() {
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	regenStats := flag.Bool("regenerate-stats", false, "Whether to completely regenerate game statistics")
 	flag.Parse()
-	
+
 	if *cpuprofile != "" {
-        f, err := os.Create(*cpuprofile)
-        if err != nil {
-            log.Fatal(err)
-        }
-        pprof.StartCPUProfile(f)
-        defer pprof.StopCPUProfile()
-    }
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	s.fileServer = *fileServer
 	s.clientDirectory = *clientDirectory
