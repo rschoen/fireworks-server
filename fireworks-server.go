@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var VERSION = "1.0.4"
+var VERSION = "1.0.5"
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
