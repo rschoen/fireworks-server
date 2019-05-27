@@ -26,6 +26,7 @@ type Game struct {
 	CurrentPlayerIndex   int
 	CurrentPlayer        string
 	State                int
+	UpdateTime           int64
 	Turn                 int
 	TurnsLeft            int
 	CardsLeft            int
@@ -81,6 +82,7 @@ func (g *Game) Initialize(public bool, ignoreTime bool, gameMode int, startingHi
 	g.Bombs = startingBombs
 	g.TurnsLeft = -1
 	g.Turn = 0
+	g.UpdateTime = -1
 
 	// start with no Players
 	g.Players = make([]Player, 0, len(cardsInHand)-1)
@@ -137,6 +139,31 @@ func (g *Game) Start() string {
 	g.Turn++
 	g.SendCurrentPlayerNotification()
 
+	return ""
+}
+
+//Wrapper in case we ever need a global time stamp to coordinate amongst distributed servers
+func getCurrentTime() int64 {
+	return time.Now().Unix()
+}
+
+func (g *Game) ProcessAnnouncement(mp *Message) string {
+	m := *mp
+	if g.State != StateStarted {
+		return "Attempting to process an announcement for a non-ongoing game."
+	}
+	p := g.GetPlayerByGoogleID(m.Player)
+	if p == nil {
+		return "Attempting to process an announcement for a nonexistent player."
+	}
+
+	// TODO: protect against code injection
+
+	// make announcement:
+	p.LastMove = ": " + m.Announcement
+	g.UpdateTime = getCurrentTime()
+
+	// success:
 	return ""
 }
 
