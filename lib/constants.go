@@ -1,5 +1,7 @@
 package lib
 
+const VERSION = "1.0.6"
+
 const HintNumber = 1
 const HintColor = 2
 
@@ -34,7 +36,7 @@ const MaxPlayers = 5
 
 const MaxConcurrentGames = 100
 const MaxStoredGames = 1000
-const DefaultClientDirectory = "/var/www/"
+const DefaultClientDirectory = "/var/www/html/"
 const DefaultPort = 8080
 const DefaultCertificate = "server.crt"
 const DefaultKey = "server.key"

@@ -24,6 +24,7 @@ type Message struct {
 	LastTurn      int
 	UpdateTime    int64
 	IgnoreTime    bool
+	SighButton    bool
 	Announcement  string
 }
 

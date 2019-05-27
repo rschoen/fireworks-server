@@ -15,8 +15,6 @@ import (
 	"time"
 )
 
-var VERSION = "1.0.5"
-
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -31,7 +29,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	var command = r.URL.Path[5:]
 	if command == "version" {
-		fmt.Fprintf(w, VERSION)
+		fmt.Fprintf(w, lib.VERSION)
 		return
 	}
 	if command == "stats" {
@@ -113,7 +111,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
 		game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 
-		var initializationError = game.Initialize(m.Public, m.IgnoreTime, m.GameMode, m.StartingHints, m.MaxHints, m.StartingBombs)
+		var initializationError = game.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode, m.StartingHints, m.MaxHints, m.StartingBombs)
 		if initializationError != "" {
 			log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
 			fmt.Fprintf(w, jsonError("Could not initialize game."))
