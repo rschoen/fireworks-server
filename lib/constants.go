@@ -1,6 +1,6 @@
 package lib
 
-const VERSION = "1.0.6"
+const VERSION = "1.0.7"
 
 const HintNumber = 1
 const HintColor = 2
@@ -42,6 +42,7 @@ const DefaultCertificate = "server.crt"
 const DefaultKey = "server.key"
 const DefaultLogDirectory = "log/"
 const StatsFile = "stats.json"
+const AuthExpirationSeconds = 7 * 24 * 60 * 60
 
 const DefaultMaxHints = 8
 const DefaultStartingHints = 8

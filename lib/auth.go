@@ -28,9 +28,9 @@ func (r *AuthResponse) GetGivenName() string {
 	return r.Given_name
 }
 
-func (r *AuthResponse) HasExpired() bool {
+func (r *AuthResponse) HasExpired(buffer int64) bool {
 	expiration, _ := strconv.Atoi(r.Exp)
-	return int64(expiration) < time.Now().Unix()
+	return int64(expiration) + buffer < time.Now().Unix()
 }
 
 func (a *Authenticator) Initialize() {
@@ -43,7 +43,7 @@ func (a *Authenticator) Authenticate(token string) (AuthResponse, string) {
 	}
 
 	r, cached := a.Cache[token]
-	if !cached || r.HasExpired() {
+	if !cached || r.HasExpired(AuthExpirationSeconds) {
 		// send authentication request
 		resp, err := http.Get("https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=" + token)
 		if err != nil {
@@ -71,7 +71,7 @@ func (a *Authenticator) Authenticate(token string) (AuthResponse, string) {
 		if r.Iss != "accounts.google.com" && r.Iss != "https://accounts.google.com" {
 			return AuthResponse{}, "Received sign-in token from different sign-in origin: " + r.Iss
 		}
-		if r.HasExpired() {
+		if r.HasExpired(AuthExpirationSeconds) {
 			return AuthResponse{}, "Received expired sign-in token."
 		}
 
