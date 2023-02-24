@@ -30,7 +30,7 @@ func (r *AuthResponse) GetGivenName() string {
 
 func (r *AuthResponse) HasExpired(buffer int64) bool {
 	expiration, _ := strconv.Atoi(r.Exp)
-	return int64(expiration) + buffer < time.Now().Unix()
+	return int64(expiration)+buffer < time.Now().Unix()
 }
 
 func (a *Authenticator) Initialize() {

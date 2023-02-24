@@ -98,10 +98,10 @@ func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
 		l.Players = make([]PlayerLog, 0, MaxStoredGames*MaxPlayers)
 		l.Stats = CreateEmptySlicedStatLog()
 	}
-	
+
 	// if we have a reinflated stats file, only log moves after it was saved
-	onlyCountMovesAfter := l.LastMoveTime	
-		
+	onlyCountMovesAfter := l.LastMoveTime
+
 	err := os.Mkdir(l.Directory, os.ModeDir|os.ModePerm)
 	if err != nil && !os.IsExist(err) {
 		return make([]*Game, 0, 0), "Error creating log directory: " + err.Error()
@@ -164,7 +164,7 @@ func (l *Logger) Initialize(regenStats bool) ([]*Game, string) {
 			} else if strings.Index(name, ".final.json") == -1 {
 				// game is finished, so let's mark it as final so we skip it later
 				newName := strings.Replace(name, ".json", "", -1) + ".final.json"
-				renameErr := os.Rename(l.Directory + name, l.Directory + newName)
+				renameErr := os.Rename(l.Directory+name, l.Directory+newName)
 				if renameErr != nil {
 					return make([]*Game, 0, 0), "Error renaming " + name + " to " + newName + ": " + renameErr.Error()
 				}
@@ -387,7 +387,7 @@ func CreateEmptySlicedStatLog() SlicedStatLog {
 	return ssl
 }
 
-func (l* Logger) DumpToFile() string {
+func (l *Logger) DumpToFile() string {
 	filename := l.Directory + StatsFile
 	file, err := os.Create(filename)
 	if err != nil {
