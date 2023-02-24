@@ -19,15 +19,21 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// serve client HTTP responses, if it's turned on
-	if len(r.URL.Path) < 5 || r.URL.Path[1:5] != "api/" {
-		if s.fileServer {
-			http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
-		}
+	//decide which API we're using, depending on what's requested and what's turned on
+	var apiPrefix string
+	if s.v1Api && len(r.URL.Path) >= len(lib.V1ApiPrefix) && r.URL.Path[1:len(lib.V1ApiPrefix)+1] == lib.V1ApiPrefix {
+		apiPrefix = lib.V1ApiPrefix
+	} else if s.v2Api && len(r.URL.Path) >= len(lib.V2ApiPrefix) && r.URL.Path[1:len(lib.V2ApiPrefix)+1] == lib.V2ApiPrefix {
+		apiPrefix = lib.V2ApiPrefix
+	} else if s.fileServer {
+		// serve client HTTP responses, if it's turned on
+		http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
+		return
+	} else {
 		return
 	}
 
-	var command = r.URL.Path[5:]
+	var command = r.URL.Path[len(apiPrefix)+1:]
 	if command == "version" {
 		fmt.Fprintf(w, lib.VERSION)
 		return
@@ -241,6 +247,8 @@ type Server struct {
 	fileServer      bool
 	clientDirectory string
 	auth            lib.Authenticator
+	v1Api           bool
+	v2Api           bool
 }
 
 func main() {
@@ -260,6 +268,8 @@ func main() {
 	logDir := flag.String("logdir", lib.DefaultLogDirectory, "Path to log directory, defaults to ./log/")
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	regenStats := flag.Bool("regenerate-stats", false, "Whether to completely regenerate game statistics")
+	enableV1Api := flag.Bool("enable-v1-api", true, "Whether turn on v1 (legacy) API endpoint")
+	enableV2Api := flag.Bool("enable-v2-api", false, "Whether turn on v2 (next-gen) API endpoint")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -275,6 +285,9 @@ func main() {
 	s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
 	portString := ":" + strconv.Itoa(*port)
+
+	s.v1Api = *enableV1Api
+	s.v2Api = *enableV2Api
 
 	// set up the logger and reconsitute games in progress
 	s.logger = new(lib.Logger)

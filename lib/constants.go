@@ -42,6 +42,8 @@ const DefaultCertificate = "server.crt"
 const DefaultKey = "server.key"
 const DefaultLogDirectory = "log/"
 const StatsFile = "stats.json"
+const V1ApiPrefix = "api/"
+const V2ApiPrefix = "apiv2/"
 const AuthExpirationSeconds = 7 * 24 * 60 * 60
 
 const DefaultMaxHints = 8
