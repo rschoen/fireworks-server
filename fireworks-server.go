@@ -270,6 +270,7 @@ func main() {
 	regenStats := flag.Bool("regenerate-stats", false, "Whether to completely regenerate game statistics")
 	enableV1Api := flag.Bool("enable-v1-api", true, "Whether turn on v1 (legacy) API endpoint")
 	enableV2Api := flag.Bool("enable-v2-api", false, "Whether turn on v2 (next-gen) API endpoint")
+	migrate := flag.Bool("migrate", false, "Run the conversion from JSON database to Sqlite")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -299,6 +300,16 @@ func main() {
 	}
 	s.games = append(s.games, games...)
 	fmt.Printf("Re-constituted %d games.\n", len(games))
+	
+	if *migrate {
+		log.Println("Migrating database...")
+		success := lib.MigrateToSqlite(s.logger)
+		if success {
+			log.Println("Migration complete.")
+		} else {
+			log.Fatal("Migration failed.")
+		}
+	}
 
 	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))

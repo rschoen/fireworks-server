@@ -16,6 +16,14 @@ const StatePerfect = 4
 const StateDeckEmpty = 5
 const StateNoPlays = 6
 
+func GameStateIsFinished(state int) bool {
+	if state != StateNotStarted && state != StateStarted {
+		return true
+	} else {
+		return false
+	}
+}
+
 const ModeNormal = 1
 const ModeRainbow = 2
 const ModeWildcard = 3
@@ -52,3 +60,5 @@ const DefaultStartingBombs = 3
 
 const MaxPlayerNameLength = 10
 const MaxGameNameLength = 20
+
+const DatabaseFile = "./database.db"
