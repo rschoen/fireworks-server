@@ -300,7 +300,7 @@ func main() {
 	}
 	s.games = append(s.games, games...)
 	fmt.Printf("Re-constituted %d games.\n", len(games))
-	
+
 	if *migrate {
 		log.Println("Migrating database...")
 		success := lib.MigrateToSqlite(s.logger)
