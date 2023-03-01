@@ -3,11 +3,12 @@ package lib
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func MigrateToSqlite(l *Logger) bool {
@@ -114,6 +115,9 @@ func createTables(db *sql.DB) {
 									hints int default 0 not null,
 									number_hints int default 0 not null,
 									color_hints int default 0 not null,
+									bombs_losses int default 0 not null,
+									turns_losses int default 0 not null,
+									no_plays_losses int default 0 not null,
 									score_list text not null,
 									primary key (id, mode, players));
 									
@@ -134,7 +138,7 @@ func insertPlayer(db *sql.DB, id string, name string) {
 	}
 }
 
-const legacyPlayerStatSql = "insert into legacy_player_stats (id, mode, players, turns, timed_turns, plays, bombs, discards, hints, number_hints, color_hints, score_list) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)"
+const legacyPlayerStatSql = "insert into legacy_player_stats (id, mode, players, turns, timed_turns, plays, bombs, discards, hints, number_hints, color_hints, bombs_losses, turns_losses, no_plays_losses, score_list) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"
 
 func insertLegacyPlayerStats(db *sql.DB, id string, mode int, players int, data StatLog) {
 
@@ -150,6 +154,9 @@ func insertLegacyPlayerStats(db *sql.DB, id string, mode int, players int, data 
 		data.Hints,
 		data.NumberHints,
 		data.ColorHints,
+		data.BombsLosses,
+		data.TurnsLosses,
+		data.NoPlaysLosses,
 		fmt.Sprint(data.Scores))
 	if err != nil {
 		log.Fatalf("Failed to insert legacy player stat. %q: %s\n", err, legacyPlayerStatSql)

@@ -21,10 +21,12 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	//decide which API we're using, depending on what's requested and what's turned on
 	var apiPrefix string
+	usingV2Api := false
 	if s.v1Api && len(r.URL.Path) >= len(lib.V1ApiPrefix) && r.URL.Path[1:len(lib.V1ApiPrefix)+1] == lib.V1ApiPrefix {
 		apiPrefix = lib.V1ApiPrefix
 	} else if s.v2Api && len(r.URL.Path) >= len(lib.V2ApiPrefix) && r.URL.Path[1:len(lib.V2ApiPrefix)+1] == lib.V2ApiPrefix {
 		apiPrefix = lib.V2ApiPrefix
+		usingV2Api = true
 	} else if s.fileServer {
 		// serve client HTTP responses, if it's turned on
 		http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
@@ -39,7 +41,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if command == "stats" {
-		json, err := lib.EncodeStatsLog(s.logger.CreateStatsLog())
+		var statsLog lib.Logger
+		if usingV2Api {
+			statsLog = s.db.CreateStatsLog()
+		} else {
+			statsLog = s.logger.CreateStatsLog()
+		}
+
+		json, err := lib.EncodeStatsLog(statsLog)
 		if err != "" {
 			log.Printf("Failed to encode stats log. Error: %s\n", err)
 			return
@@ -244,6 +253,7 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 type Server struct {
 	games           []*lib.Game
 	logger          *lib.Logger
+	db              *lib.Database
 	fileServer      bool
 	clientDirectory string
 	auth            lib.Authenticator
@@ -309,6 +319,11 @@ func main() {
 		} else {
 			log.Fatal("Migration failed.")
 		}
+	}
+
+	if *enableV2Api {
+		s.db = new(lib.Database)
+		s.db.Connect()
 	}
 
 	if *https {
