@@ -13,7 +13,11 @@ import (
 
 func MigrateToSqlite(l *Logger) bool {
 
-	ignoreGames := [5]string{"helloooooo-1558986018", "ht-1514332240", "ryan tests the nabs-1677375807", "newpinabi-1545197046", "ryan!-1552274353"}
+	ignoreGames := [12]string{"helloooooo-1558986018", "ht-1514332240",
+		"ryan tests the nabs-1677375807", "newpinabi-1545197046",
+		"ryan!-1552274353", "jakenabi-1573330579", "game-1577335419",
+		"Ryans test game-1668884223", "game1-1584585659","shaved pup-1588205875",
+		"burgers-1591760095", "wipeout-1644466001"}
 
 	db := deleteAndCreateDatabase(DatabaseFile)
 	defer db.Close()
@@ -59,7 +63,7 @@ gameLoop:
 			}
 		}
 		if !foundGame {
-			fmt.Printf("Couldn't find stats blob for game %s.", game.ID)
+			fmt.Printf("Couldn't find stats blob for game %s.\n", game.ID)
 			//return false
 		}
 	}
@@ -88,6 +92,8 @@ func createTables(db *sql.DB) {
 						last_move_time int,
 						turns int default 0 not null,
 						timed_turns int default 0 not null,
+						turn_time int default 0 not null,
+						game_time int default 0 not null,
 						plays int default 0 not null,
 						bombs int default 0 not null,
 						discards int default 0 not null,
@@ -99,16 +105,19 @@ func createTables(db *sql.DB) {
 						mode int,
 						players int,
 						game_state_data blob);
-						
+
 	create table game_players (game_id text references games(id),
 							player_id text references players(id),
 							primary key (game_id, player_id));
-							
+
 	create table legacy_player_stats (id text references players(id),
 									mode int not null,
 									players int not null,
+									finished_games int not null,
 									turns int default 0 not null,
 									timed_turns int default 0 not null,
+									turn_time int default 0 not null,
+									game_time int default 0 not null,
 									plays int default 0 not null,
 									bombs int default 0 not null,
 									discards int default 0 not null,
@@ -120,7 +129,7 @@ func createTables(db *sql.DB) {
 									no_plays_losses int default 0 not null,
 									score_list text not null,
 									primary key (id, mode, players));
-									
+
 	`
 	_, err := db.Exec(sqlStmt)
 	if err != nil {
@@ -138,7 +147,7 @@ func insertPlayer(db *sql.DB, id string, name string) {
 	}
 }
 
-const legacyPlayerStatSql = "insert into legacy_player_stats (id, mode, players, turns, timed_turns, plays, bombs, discards, hints, number_hints, color_hints, bombs_losses, turns_losses, no_plays_losses, score_list) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)"
+const legacyPlayerStatSql = "insert into legacy_player_stats (id, mode, players, finished_games, turns, timed_turns, turn_time, game_time, plays, bombs, discards, hints, number_hints, color_hints, bombs_losses, turns_losses, no_plays_losses, score_list) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
 
 func insertLegacyPlayerStats(db *sql.DB, id string, mode int, players int, data StatLog) {
 
@@ -146,8 +155,11 @@ func insertLegacyPlayerStats(db *sql.DB, id string, mode int, players int, data 
 		id,
 		mode,
 		players,
+		data.FinishedGames,
 		data.Turns,
 		data.TimedTurns,
+		data.TurnTime,
+		data.GameTime,
 		data.Plays,
 		data.Bombs,
 		data.Discards,
@@ -180,10 +192,7 @@ func getScoreFromScoreList(list []int) int {
 }
 
 func determineFinalState(data StatLog, mode int, score int) int {
-	highScore := 30
-	if mode == ModeNormal {
-		highScore = 25
-	}
+	var highScore = PerfectScoreForMode(mode)
 
 	if data.BombsLosses == 1 {
 		return StateBombedOut
@@ -199,7 +208,7 @@ func determineFinalState(data StatLog, mode int, score int) int {
 	return -1
 }
 
-const gameInsertSql = "insert into games (id, name, time_started, last_move_time, turns, timed_turns, plays, bombs, discards, hints, number_hints, color_hints, state, score, mode, players) values ($1,$2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)"
+const gameInsertSql = "insert into games (id, name, time_started, last_move_time, turns, timed_turns, turn_time, game_time, plays, bombs, discards, hints, number_hints, color_hints, state, score, mode, players) values ($1,$2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
 
 func insertGame(db *sql.DB, id string, name string, lastMoveTime int64, data StatLog, state int, gameScore int, mode int, players int) {
 
@@ -212,6 +221,8 @@ func insertGame(db *sql.DB, id string, name string, lastMoveTime int64, data Sta
 		lastMoveTime,
 		data.Turns,
 		data.TimedTurns,
+		data.TurnTime,
+		data.GameTime,
 		data.Plays,
 		data.Bombs,
 		data.Discards,

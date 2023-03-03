@@ -150,3 +150,11 @@ MainLoop:
 
 	return score
 }
+
+func PerfectScoreForMode(mode int) int {
+	highScore := 30
+	if mode == ModeNormal {
+		highScore = 25
+	}
+	return highScore
+}

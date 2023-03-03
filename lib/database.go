@@ -6,7 +6,6 @@ import (
 
 	"strconv"
 	"strings"
-
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -34,14 +33,17 @@ func (db *Database) CreateStatsLog() Logger {
 								name,
 								mode,
 								players,
+								finished_games,
 								turns,
 								timed_turns,
+								turn_time,
+								game_time,
 								plays,
 								bombs,
 								discards,
 								hints,
 								bombs_losses,
-								turn_losses,
+								turns_losses,
 								no_plays_losses,
 								score_list
 								FROM players
@@ -53,10 +55,10 @@ func (db *Database) CreateStatsLog() Logger {
 	defer rows.Close()
 	{
 		lastId := ""
-		var id, name, scoreList string
-		var mode, players, turns, timedTurns, plays, bombs, discards, hints, bombsLosses, turnLosses, noPlaysLosses int
+		var id, name, scoreString string
+		var mode, players, finishedGames, turns, timedTurns, turnTime, gameTime, plays, bombs, discards, hints, bombsLosses, turnsLosses, noPlaysLosses int
 		for rows.Next() {
-			err = rows.Scan(&id, &name, &mode, &players, &turns, &timedTurns, &plays, &bombs, &discards, &hints, &bombsLosses, &turnLosses, &noPlaysLosses, &scoreList)
+			err = rows.Scan(&id, &name, &mode, &players, &finishedGames, &turns, &timedTurns, &turnTime, &gameTime, &plays, &bombs, &discards, &hints, &bombsLosses, &turnsLosses, &noPlaysLosses, &scoreString)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -65,27 +67,26 @@ func (db *Database) CreateStatsLog() Logger {
 				lastId = id
 				l.Players = append(l.Players, PlayerLog{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()})
 			}
+			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].FinishedGames += int64(finishedGames)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
+			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
+			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].BombsLosses += int64(hints)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
+			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].BombsLosses += int64(bombsLosses)
+			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].TurnsLosses += int64(turnsLosses)
+			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].NoPlaysLosses += int64(noPlaysLosses)
 
-			scores := strings.Split(" ", scoreList[1:len(scoreList)-1])
-			scoreList := make([]int, len(scores))
-			for i, _ := range scores {
-				scoreList[i], err = strconv.Atoi(scores[i])
-			}
+			scoreList := scoreListFromString(scoreString)
 			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Scores = scoreList
 		}
 	}
 	{
 		rows, err := db.dbRef.Query(`
-								SELECT 
+								SELECT
 								id,
 								name,
 								last_move_time,
@@ -93,6 +94,8 @@ func (db *Database) CreateStatsLog() Logger {
 								players,
 								turns,
 								timed_turns,
+								turn_time,
+								game_time,
 								plays,
 								bombs,
 								discards,
@@ -106,35 +109,75 @@ func (db *Database) CreateStatsLog() Logger {
 		defer rows.Close()
 
 		var id, name string
-		var last_move_time, mode, players, turns, timedTurns, plays, bombs, discards, hints, state, score int
+		var last_move_time, mode, players, turns, timedTurns, turnTime, gameTime, plays, bombs, discards, hints, state, score int
 		for rows.Next() {
-			err = rows.Scan(&id, &name, &last_move_time, &mode, &players, &turns, &timedTurns, &plays, &bombs, &discards, &hints, &state, &score)
+			err = rows.Scan(&id, &name, &last_move_time, &mode, &players, &turns, &timedTurns, &turnTime, &gameTime, &plays, &bombs, &discards, &hints, &state, &score)
 			if err != nil {
 				log.Fatal(err)
 			}
+			l.Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
+			l.Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
+			l.Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
+			l.Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
+			l.Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
+			l.Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
+			l.Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
+			l.Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
 
-			if id != lastId {
-				lastId = id
-				l.Players = append(l.Players, PlayerLog{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()})
+			if(state != StateNotStarted) {
+				l.Stats.ModesAndPlayers[mode][players].FinishedGames += 1
 			}
-			g := Game{}
-			// TODO: finish out making it so that this only needs to update a single thing
-			g.Stats.Overall
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
+			if(state == StateNoPlays) {
+				l.Stats.ModesAndPlayers[mode][players].NoPlaysLosses += 1
+			}
+			if(state == StateBombedOut) {
+				l.Stats.ModesAndPlayers[mode][players].BombsLosses += 1
+			}
+			if(state == StateDeckEmpty) {
+				l.Stats.ModesAndPlayers[mode][players].TurnsLosses += 1
+			}
 
-			scores := strings.Split(" ", scoreList[1:len(scoreList)-1])
-			scoreList := make([]int, len(scores))
-			for i, _ := range scores {
-				scoreList[i], err = strconv.Atoi(scores[i])
+
+			//scoreList := scoreListFromString(scores)
+
+			if(len(l.Stats.ModesAndPlayers[mode][players].Scores) == 0) {
+				l.Stats.ModesAndPlayers[mode][players].Scores = make([]int,PerfectScoreForMode(mode)+1)
 			}
-			l.Players[len(l.Players)-1].Stats.ModesAndPlayers[mode][players].Scores = scoreList
+			l.Stats.ModesAndPlayers[mode][players].Scores[score] += 1
+
+
+			// TODO: modify game_players so that it holds the stats for what the player did in that game
+			// TODO: then we need to go through and sum up what each of the players did in each of the {mode,game} combos
+			// and add it into their player stats above
+			// BUT as for right now, the stats is complete as emitted
+
+
 		}
 	}
 
+
+
 	return l
 }
+
+func scoreListFromString(scoreString string) []int {
+	scores := strings.Split(scoreString[1:len(scoreString)-1], " ")
+	scoreList := make([]int, len(scores))
+	var err error
+	for i, score := range scores {
+		if score != "" {
+			scoreList[i], err = strconv.Atoi(score)
+			if(err != nil) {
+				log.Fatal(err)
+			}
+		}
+	}
+	return scoreList
+}
+
+/*func addScoreToScoreList(scoreList []int, score int) {
+	for i := range(math.Max(len(s1,s2))) {
+		s1[i] = s1[i] + s2[i]
+	}
+	return s1
+}*/
