@@ -40,13 +40,11 @@ type GamesList struct {
 	PlayersGames []MinimalGame
 }
 
-
 type StatsMessage struct {
 	Players      map[string]PlayerStats
 	LastMoveTime int64
 	Stats        SlicedStatLog
 }
-
 
 type PlayerStats struct {
 	ID    string
@@ -74,7 +72,6 @@ type StatLog struct {
 	FinishedGames int64
 	Scores        []int
 }
-
 
 func CreateEmptySlicedStatLog() SlicedStatLog {
 	ssl := SlicedStatLog{}

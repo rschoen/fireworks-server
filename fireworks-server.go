@@ -124,7 +124,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		command = "join"
 	}
 
-	if containsKey(s.games, m.Game) {
+	if _, ok := s.games[m.Game]; ok {
 		game = s.games[m.Game]
 	} else {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
@@ -297,24 +297,6 @@ func main() {
 func contains(list []string, element string) bool {
 	for _, elementToCheck := range list {
 		if elementToCheck == element {
-			return true
-		}
-	}
-	return false
-}
-
-/*func contains(list []int, element int) bool {
-	for _, elementToCheck := range list {
-		if elementToCheck == element {
-			return true
-		}
-	}
-	return false
-}*/
-
-func containsKey(list map[string]lib.Game, element string) bool {
-	for key, _ := range list {
-		if key == element {
 			return true
 		}
 	}

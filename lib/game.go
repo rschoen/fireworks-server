@@ -17,13 +17,13 @@ type Game struct {
 	IgnoreTime  bool
 	SighButton  bool
 
-	State              int
-	StartTime          int64
-	LastUpdateTime     int64
-	Mode               int
-	CurrentScore       int
-	Table              Table
-	Score              int
+	State          int
+	StartTime      int64
+	LastUpdateTime int64
+	Mode           int
+	CurrentScore   int
+	Table          Table
+	Score          int
 
 	Stats StatLog
 }

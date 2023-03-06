@@ -118,7 +118,7 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 					log.Fatal(err)
 				}
 
-				if !playersListContains(sm.Players, id) {
+				if _, ok := sm.Players[id]; !ok {
 					sm.Players[id] = PlayerStats{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()}
 				}
 
@@ -458,13 +458,4 @@ func (db *Database) execQuery(query string, args ...string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func playersListContains(list map[string]PlayerStats, id string) bool {
-	for key, _ := range list {
-		if key == id {
-			return true
-		}
-	}
-	return false
 }
