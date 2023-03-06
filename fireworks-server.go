@@ -19,14 +19,9 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	//decide which API we're using, depending on what's requested and what's turned on
-	var apiPrefix string
-	usingV2Api := false
-	if s.v1Api && len(r.URL.Path) >= len(lib.V1ApiPrefix) && r.URL.Path[1:len(lib.V1ApiPrefix)+1] == lib.V1ApiPrefix {
-		apiPrefix = lib.V1ApiPrefix
-	} else if s.v2Api && len(r.URL.Path) >= len(lib.V2ApiPrefix) && r.URL.Path[1:len(lib.V2ApiPrefix)+1] == lib.V2ApiPrefix {
-		apiPrefix = lib.V2ApiPrefix
-		usingV2Api = true
+  apiPrefix := "/apiv2/"
+	if len(r.URL.Path) >= len(apiPrefix) && r.URL.Path[:len(apiPrefix)] == apiPrefix {
+		// nuttin
 	} else if s.fileServer {
 		// serve client HTTP responses, if it's turned on
 		http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
@@ -35,18 +30,16 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var command = r.URL.Path[len(apiPrefix)+1:]
+	var command = r.URL.Path[len(apiPrefix):]
 	if command == "version" {
 		fmt.Fprintf(w, lib.VERSION)
 		return
 	}
 	if command == "stats" {
-		var statsLog lib.Logger
-		if usingV2Api {
-			statsLog = s.db.CreateStatsLog()
-		} else {
-			statsLog = s.logger.CreateStatsLog()
-		}
+
+		// TODO: replace this to be some sort of JSON message format rather than Logger
+		statsLog := s.db.CreateStatsLog()
+
 
 		json, err := lib.EncodeStatsLog(statsLog)
 		if err != "" {
@@ -63,12 +56,9 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, jsonError("Data sent was malformed."))
 		return
 	}
-	var game *lib.Game
-	for _, ongoingGame := range s.games {
-		if ongoingGame.ID == m.Game {
-			game = ongoingGame
-		}
-	}
+	var game lib.Game
+	// TODO: function to look up game in DB
+
 
 	// Authenticate user
 	authResponse, authError := s.auth.Authenticate(m.Token)
@@ -85,29 +75,29 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if command == "list" {
 		list := lib.GamesList{}
-		for i, _ := range s.games {
-			state := s.games[i].State
-			if state != lib.StateNotStarted && state != lib.StateStarted {
-				continue
-			}
+		games := s.db.GetGameListForPlayer(m.Player)
+		for _, game := range(s.games) {
+			if(game.State == lib.StateNotStarted) ||
+				(contains(games, game.ID) && !lib.GameStateIsFinished(game.State) &&
+				   len(game.Players) < lib.MaxPlayers && game.Public == true) {
 
-			playerList := ""
-			addGame := false
-			for player, _ := range s.games[i].Players {
-				playerList += s.games[i].Players[player].Name + ", "
-				if s.games[i].Players[player].GoogleID == m.Player {
-					addGame = true
+
+
+				playerList := ""
+				for player, _ := range s.games[game.ID].Players {
+					playerList += s.games[game.ID].Players[player].Name + ", "
 				}
-			}
-			if playerList != "" {
-				playerList = playerList[:len(playerList)-2]
-			}
-			game := lib.MinimalGame{ID: s.games[i].ID, Name: s.games[i].Name, Players: playerList, Mode: s.games[i].Mode}
 
-			if addGame {
-				list.PlayersGames = append(list.PlayersGames, game)
-			} else if state == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers && s.games[i].Public == true {
-				list.OpenGames = append(list.OpenGames, game)
+				if playerList != "" {
+					playerList = playerList[:len(playerList)-2]
+				}
+				game := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+
+				if contains(games,game.ID) {
+					list.PlayersGames = append(list.PlayersGames, game)
+				} else {
+					list.OpenGames = append(list.OpenGames, game)
+				}
 			}
 		}
 
@@ -122,23 +112,26 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "create" {
-		game = new(lib.Game)
+		// TODO: store this in database!!! the correct way
+		game = lib.Game{}
 		game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
 		game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 
-		var initializationError = game.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode, m.StartingHints, m.MaxHints, m.StartingBombs)
+		var initializationError = game.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode)
 		if initializationError != "" {
 			log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
 			fmt.Fprintf(w, jsonError("Could not initialize game."))
 			return
 		}
-		s.games = append(s.games, game)
+		s.games[game.ID] = game
 		log.Printf("Created new game '%s'\n", m.Game)
 
 		command = "join"
 	}
 
-	if game == nil {
+	if(containsKey(s.games,m.Game)) {
+		game = s.games[m.Game]
+	} else {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
 		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
 		return
@@ -155,6 +148,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			}
 			playerName := sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true)
 			addError := game.AddPlayer(m.Player, playerName)
+			s.db.AddPlayer(m.Player, game.ID)
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
 				fmt.Fprintf(w, jsonError("Unable to join this game."))
@@ -198,32 +192,31 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "move" {
-		if m.MoveType == lib.MoveHint && game.Hints <= 0 {
-			fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))
-			return
-		}
+
 		var processError = game.ProcessMove(&m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
 			fmt.Fprintf(w, jsonError("Could not process move."))
 			return
 		}
-		logError := s.logger.LogMove(*game, m, time.Now().Unix(), true)
+		logError := s.db.LogMove(game, m, time.Now().Unix())
 		if logError != "" {
 			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
 			fmt.Fprintf(w, jsonError("Could not log move."))
 			return
 		}
+		s.db.SaveGameToDatabase(game)
 		player.PushToken = m.PushToken
 		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
 	if command == "status" {
-		if m.LastTurn == game.Turn && m.UpdateTime == game.UpdateTime {
+		if m.LastTurn == game.Table.Turn && m.UpdateTime == game.LastUpdateTime {
 			fmt.Fprintf(w, "")
 			return
 		}
 	}
+
 
 	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
 	if err != "" {
@@ -250,15 +243,14 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 	return text
 }
 
+// TODO: get rid of the logger altogether
 type Server struct {
-	games           []*lib.Game
+	games           map[string]lib.Game
 	logger          *lib.Logger
 	db              *lib.Database
 	fileServer      bool
-	clientDirectory string
 	auth            lib.Authenticator
-	v1Api           bool
-	v2Api           bool
+	clientDirectory string
 }
 
 func main() {
@@ -266,7 +258,7 @@ func main() {
 
 	// initialize server
 	s := Server{}
-	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
+	s.games = make(map[string]lib.Game)
 	s.auth.Initialize()
 
 	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
@@ -275,12 +267,8 @@ func main() {
 	port := flag.Int("port", lib.DefaultPort, "Port to listen for connections from client.")
 	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if using --http")
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
-	logDir := flag.String("logdir", lib.DefaultLogDirectory, "Path to log directory, defaults to ./log/")
+	databaseFile := flag.String("database", lib.DefaultDatabaseFile, "File to use as database, defaults to " + lib.DefaultDatabaseFile)
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
-	regenStats := flag.Bool("regenerate-stats", false, "Whether to completely regenerate game statistics")
-	enableV1Api := flag.Bool("enable-v1-api", true, "Whether turn on v1 (legacy) API endpoint")
-	enableV2Api := flag.Bool("enable-v2-api", false, "Whether turn on v2 (next-gen) API endpoint")
-	migrate := flag.Bool("migrate", false, "Run the conversion from JSON database to Sqlite")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -297,34 +285,14 @@ func main() {
 	http.HandleFunc("/", s.handler)
 	portString := ":" + strconv.Itoa(*port)
 
-	s.v1Api = *enableV1Api
-	s.v2Api = *enableV2Api
-
 	// set up the logger and reconsitute games in progress
+	log.Println("Loading database...")
 	s.logger = new(lib.Logger)
-	s.logger.Directory = *logDir
-	fmt.Println("Re-constituting games in progress.")
-	games, loggerError := s.logger.Initialize(*regenStats)
-	if loggerError != "" {
-		log.Fatal("Failed to initialize logger. Error: " + loggerError)
-	}
-	s.games = append(s.games, games...)
-	fmt.Printf("Re-constituted %d games.\n", len(games))
+	s.db = new(lib.Database)
+	s.db.Connect(*databaseFile)
+	s.games = s.db.GetActiveGames()
 
-	if *migrate {
-		log.Println("Migrating database...")
-		success := lib.MigrateToSqlite(s.logger)
-		if success {
-			log.Println("Migration complete.")
-		} else {
-			log.Fatal("Migration failed.")
-		}
-	}
-
-	if *enableV2Api {
-		s.db = new(lib.Database)
-		s.db.Connect()
-	}
+	log.Println("Ready to go!")
 
 	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))
@@ -332,4 +300,34 @@ func main() {
 		log.Fatal(http.ListenAndServe(portString, nil))
 	}
 
+}
+
+
+//delete when you find the right one...
+
+func contains(list []string, element string) bool {
+	for _, elementToCheck := range list {
+		if elementToCheck == element {
+			return true
+		}
+	}
+	return false
+}
+
+/*func contains(list []int, element int) bool {
+	for _, elementToCheck := range list {
+		if elementToCheck == element {
+			return true
+		}
+	}
+	return false
+}*/
+
+func containsKey(list map[string]lib.Game, element string) bool {
+	for key, _ := range list {
+		if key == element {
+			return true
+		}
+	}
+	return false
 }

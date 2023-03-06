@@ -118,3 +118,24 @@ func DecodeWholeStatsLog(s string) (Logger, string) {
 
 	return l, ""
 }
+
+
+func DecodeTable(s string) (Table, string) {
+	b := []byte(s)
+	var table Table
+	err := json.Unmarshal(b, &table)
+	if err != nil {
+		return Table{}, "Error decoding table from JSON string.\nDecoding string: " + s + "\nError: " + err.Error()
+	}
+
+	return table, ""
+}
+
+func EncodeTable(table Table) (string, string) {
+	b, err := json.Marshal(table)
+	if err != nil {
+		return "", "Error encoding table to JSON string: " + err.Error()
+	}
+
+	return string(b), ""
+}
