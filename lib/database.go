@@ -279,19 +279,19 @@ func (db *Database) GetActiveGames() map[string]Game {
 
 func (db *Database) LookupGameById(id string) Game {
 	row := db.dbRef.QueryRow(`select name,
-		current_player_index, state, time_started, last_move_time, turns, timed_turns,
+		state, time_started, last_move_time, turns, timed_turns,
 		turn_time, game_time, plays, bombs, discards, hints,
-		score, mode, players, initialized, public, ignore_time, sigh_button, table_state
+		score, mode, players, public, ignore_time, sigh_button, table_state
 		 												from games where id=$1`, id)
 	var name, tableState string
-	var initialized, public, ignoreTime, sighButton bool
-	var currentPlayerIndex, state, timeStarted, lastMoveTime, turns, timedTurns,
+	var public, ignoreTime, sighButton bool
+	var state, timeStarted, lastMoveTime, turns, timedTurns,
 		turnTime, gameTime, plays, bombs, discards, hints, score, mode, players int
 
 	switch err := row.Scan(&name,
-		&currentPlayerIndex, &state, &timeStarted, &lastMoveTime, turns, &timedTurns,
+		&state, &timeStarted, &lastMoveTime, turns, &timedTurns,
 		&turnTime, &gameTime, &plays, &bombs, &discards, &hints,
-		&score, &mode, &players, &initialized, &public, &ignoreTime, &sighButton, &tableState); err {
+		&score, &mode, &players, &public, &ignoreTime, &sighButton, &tableState); err {
 	case sql.ErrNoRows:
 		fmt.Println("Game not found: " + id)
 	case nil:
@@ -302,7 +302,6 @@ func (db *Database) LookupGameById(id string) Game {
 		game.StartTime = int64(timeStarted)
 		game.LastUpdateTime = int64(lastMoveTime)
 		game.Mode = mode
-		game.Initialized = initialized
 		game.Public = public
 		game.IgnoreTime = ignoreTime
 		game.SighButton = sighButton
@@ -339,15 +338,9 @@ func (db *Database) SaveGameToDatabase(game Game) {
 		log.Fatal(error)
 	}
 
-	_, err := db.dbRef.Exec(`update games set current_player_index=$1, state=$2,
-		time_started=$3, last_move_time=$4, turns=$5, timed_turns=$6, turn_time=$7,
-		game_time=$8, plays=$9, bombs=$10, discards=$11, hints=$12, score=$13,
-		players=$14, initialized=$15, table_state=$16, players=$17 where id=$18`,
-		game.CurrentPlayerIndex, game.State, game.StartTime, game.LastUpdateTime,
-		game.Stats.Turns, game.Stats.TimedTurns, game.Stats.TurnTime,
-		game.Stats.GameTime, game.Stats.Plays, game.Stats.Bombs,
-		game.Stats.Discards, game.Stats.Hints, game.Score,
-		game.Players, game.Initialized, json, len(game.Players), game.ID)
+	_, err := db.dbRef.Exec(`update games set state=$2, last_move_time=$3,
+		score=$4, players=$5, table_state=$6 where id=$1`,
+		game.ID, game.State, game.LastUpdateTime, game.Score, game.Players, json)
 
 	if err != nil {
 		panic(err)

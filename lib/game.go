@@ -17,7 +17,6 @@ type Game struct {
 	IgnoreTime  bool
 	SighButton  bool
 
-	CurrentPlayerIndex int
 	State              int
 	StartTime          int64
 	LastUpdateTime     int64
@@ -115,7 +114,7 @@ func (g *Game) Start() string {
 	}
 
 	// let's do it
-	g.CurrentPlayerIndex = rand.Intn(numPlayers)
+	g.Table.CurrentPlayerIndex = rand.Intn(numPlayers)
 	g.State = StateStarted
 	g.StartTime = time.Now().Unix()
 	g.Table.Turn++
@@ -158,7 +157,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 	if g.State != StateStarted {
 		return "Attempting to process a move for a non-ongoing game."
 	}
-	if m.Player != g.Players[g.CurrentPlayerIndex].GoogleID {
+	if m.Player != g.Players[g.Table.CurrentPlayerIndex].GoogleID {
 		return "Attempting to process a move for out-of-turn player."
 	}
 	p := g.GetPlayerByGoogleID(m.Player)
@@ -264,7 +263,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 		g.Table.TurnsLeft = len(g.Players)
 	}
 
-	g.CurrentPlayerIndex = (g.CurrentPlayerIndex + 1) % len(g.Players)
+	g.Table.CurrentPlayerIndex = (g.Table.CurrentPlayerIndex + 1) % len(g.Players)
 	g.SendCurrentPlayerNotification()
 	g.Table.CardsLastModified = cardsModified
 
@@ -320,7 +319,7 @@ func (g *Game) GetPlayerByGoogleID(id string) *Player {
 }
 
 func (g *Game) SendCurrentPlayerNotification() {
-	token := g.GetPlayerByGoogleID(g.Players[g.CurrentPlayerIndex].GoogleID).PushToken
+	token := g.GetPlayerByGoogleID(g.Players[g.Table.CurrentPlayerIndex].GoogleID).PushToken
 	if token == "" {
 		return
 	}
@@ -365,7 +364,7 @@ func (g *Game) AnyPlayableCards() bool {
 		if g.Table.TurnsLeft != -1 && i >= g.Table.TurnsLeft {
 			break
 		}
-		p := g.Players[(i+g.CurrentPlayerIndex)%len(g.Players)]
+		p := g.Players[(i+g.Table.CurrentPlayerIndex)%len(g.Players)]
 		for _, c := range p.Cards {
 			if g.Table.CardPlayableOnPile(c) > -1 {
 				return true

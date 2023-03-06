@@ -16,6 +16,7 @@ type Table struct {
 	CardsLastModified []int
 	Colors            []string
 
+	CurrentPlayerIndex   int
 	Turn                 int
 	TurnsLeft            int
 	CardsLeft            int
