@@ -17,16 +17,16 @@ type Game struct {
 	IgnoreTime  bool
 	SighButton  bool
 
-	CurrentPlayerIndex   int
-	State                int
-	StartTime            int64
-	LastUpdateTime       int64
-	Mode                 int
-	CurrentScore         int
-	Table								 Table
-	Score 							int
+	CurrentPlayerIndex int
+	State              int
+	StartTime          int64
+	LastUpdateTime     int64
+	Mode               int
+	CurrentScore       int
+	Table              Table
+	Score              int
 
-	Stats 								StatLog
+	Stats StatLog
 }
 
 func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMode int) string {
@@ -158,7 +158,7 @@ func (g *Game) ProcessMove(mp *Message) string {
 	if g.State != StateStarted {
 		return "Attempting to process a move for a non-ongoing game."
 	}
-	if m.Player != 	g.Players[g.CurrentPlayerIndex].GoogleID {
+	if m.Player != g.Players[g.CurrentPlayerIndex].GoogleID {
 		return "Attempting to process a move for out-of-turn player."
 	}
 	p := g.GetPlayerByGoogleID(m.Player)
@@ -348,13 +348,12 @@ func (g *Game) SendCurrentPlayerNotification() {
 }
 
 func (g *Game) GetPlayerListAsString() string {
-		playerString := ""
-		for _, player := range(g.Players) {
-			playerString += "'" + player.GoogleID + "'',"
-		}
-		return playerString[:-len(playerString)-1]
+	playerString := ""
+	for _, player := range g.Players {
+		playerString += "'" + player.GoogleID + "'',"
+	}
+	return playerString[:-len(playerString)-1]
 }
-
 
 func (g *Game) AnyPlayableCards() bool {
 	if g.Table.Turn < 15 {

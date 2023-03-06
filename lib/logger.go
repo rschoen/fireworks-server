@@ -1,12 +1,10 @@
 package lib
 
-
-
 type Logger struct {
 	Players      map[string]PlayerLog
 	LastMoveTime int64
 	Initialized  bool
-	Stats SlicedStatLog
+	Stats        SlicedStatLog
 }
 
 type LoggerMessage struct {
@@ -50,22 +48,17 @@ type StatLog struct {
 	Scores        []int
 }
 
-
-
 func (l *Logger) CreateStatsLog() Logger {
 	lCopy := Logger{}
 	lCopy = *l
 	return lCopy
 }
 
-
-
-
 func CreateEmptySlicedStatLog() SlicedStatLog {
 	ssl := SlicedStatLog{}
 
-	ssl.Modes = make([]StatLog, Modes+1, Modes+1)
-	ssl.NumPlayers = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
+	//ssl.Modes = make([]StatLog, Modes+1, Modes+1)
+	//ssl.NumPlayers = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
 	ssl.ModesAndPlayers = make([][]StatLog, Modes+1, Modes+1)
 
 	for i := 0; i <= Modes; i++ {

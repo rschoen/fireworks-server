@@ -6,22 +6,22 @@ import (
 	"math/rand"
 )
 
- type Table struct {
-	HintsLeft                int
-	BombsBombed                int
-	Deck                 []Card
-	Discard              []Card
-	Piles                []int
-	PileCards            []Card
-	CardsLastModified    []int
-	Colors               []string
+type Table struct {
+	HintsLeft         int
+	BombsBombed       int
+	Deck              []Card
+	Discard           []Card
+	Piles             []int
+	PileCards         []Card
+	CardsLastModified []int
+	Colors            []string
 
 	Turn                 int
 	TurnsLeft            int
 	CardsLeft            int
 	HighestPossibleScore int
-	NumPlayers int
-	Mode int
+	NumPlayers           int
+	Mode                 int
 }
 
 func (t *Table) PopulateDeck() {
@@ -67,7 +67,6 @@ func (t *Table) ArePilesComplete() bool {
 	return true
 }
 
-
 func (t *Table) Score() int {
 	score := 0
 	for _, count := range t.Piles {
@@ -94,7 +93,6 @@ func (t *Table) CardPlayableOnPile(c Card) int {
 	return t.CardPlayableOnCustomPile(c, t.Piles)
 }
 
-
 func (t *Table) MaxCards() int {
 	maxCards := 0
 	for _, count := range numbers {
@@ -105,7 +103,6 @@ func (t *Table) MaxCards() int {
 	}
 	return maxCards
 }
-
 
 func PerfectScoreForMode(mode int) int {
 	highScore := 30

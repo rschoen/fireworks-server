@@ -19,7 +19,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-  apiPrefix := "/apiv2/"
+	apiPrefix := "/apiv2/"
 	if len(r.URL.Path) >= len(apiPrefix) && r.URL.Path[:len(apiPrefix)] == apiPrefix {
 		// nuttin
 	} else if s.fileServer {
@@ -40,7 +40,6 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		// TODO: replace this to be some sort of JSON message format rather than Logger
 		statsLog := s.db.CreateStatsLog()
 
-
 		json, err := lib.EncodeStatsLog(statsLog)
 		if err != "" {
 			log.Printf("Failed to encode stats log. Error: %s\n", err)
@@ -59,7 +58,6 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	var game lib.Game
 	// TODO: function to look up game in DB
 
-
 	// Authenticate user
 	authResponse, authError := s.auth.Authenticate(m.Token)
 	if authError != "" {
@@ -76,12 +74,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	if command == "list" {
 		list := lib.GamesList{}
 		games := s.db.GetGameListForPlayer(m.Player)
-		for _, game := range(s.games) {
-			if(game.State == lib.StateNotStarted) ||
+		for _, game := range s.games {
+			if (game.State == lib.StateNotStarted) ||
 				(contains(games, game.ID) && !lib.GameStateIsFinished(game.State) &&
-				   len(game.Players) < lib.MaxPlayers && game.Public == true) {
-
-
+					len(game.Players) < lib.MaxPlayers && game.Public == true) {
 
 				playerList := ""
 				for player, _ := range s.games[game.ID].Players {
@@ -93,7 +89,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 				}
 				game := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
 
-				if contains(games,game.ID) {
+				if contains(games, game.ID) {
 					list.PlayersGames = append(list.PlayersGames, game)
 				} else {
 					list.OpenGames = append(list.OpenGames, game)
@@ -129,7 +125,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		command = "join"
 	}
 
-	if(containsKey(s.games,m.Game)) {
+	if containsKey(s.games, m.Game) {
 		game = s.games[m.Game]
 	} else {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
@@ -217,7 +213,6 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-
 	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
@@ -267,7 +262,7 @@ func main() {
 	port := flag.Int("port", lib.DefaultPort, "Port to listen for connections from client.")
 	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if using --http")
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
-	databaseFile := flag.String("database", lib.DefaultDatabaseFile, "File to use as database, defaults to " + lib.DefaultDatabaseFile)
+	databaseFile := flag.String("database", lib.DefaultDatabaseFile, "File to use as database, defaults to "+lib.DefaultDatabaseFile)
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	flag.Parse()
 
@@ -301,7 +296,6 @@ func main() {
 	}
 
 }
-
 
 //delete when you find the right one...
 

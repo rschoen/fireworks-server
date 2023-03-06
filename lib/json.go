@@ -119,7 +119,6 @@ func DecodeWholeStatsLog(s string) (Logger, string) {
 	return l, ""
 }
 
-
 func DecodeTable(s string) (Table, string) {
 	b := []byte(s)
 	var table Table
