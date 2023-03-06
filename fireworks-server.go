@@ -37,10 +37,9 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 	if command == "stats" {
 
-		// TODO: replace this to be some sort of JSON message format rather than Logger
-		statsLog := s.db.CreateStatsLog()
+		statsLog := s.db.CreateStatsMessage()
 
-		json, err := lib.EncodeStatsLog(statsLog)
+		json, err := lib.EncodeStatsMessage(statsLog)
 		if err != "" {
 			log.Printf("Failed to encode stats log. Error: %s\n", err)
 			return
@@ -238,10 +237,8 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 	return text
 }
 
-// TODO: get rid of the logger altogether
 type Server struct {
 	games           map[string]lib.Game
-	logger          *lib.Logger
 	db              *lib.Database
 	fileServer      bool
 	auth            lib.Authenticator
@@ -280,9 +277,7 @@ func main() {
 	http.HandleFunc("/", s.handler)
 	portString := ":" + strconv.Itoa(*port)
 
-	// set up the logger and reconsitute games in progress
 	log.Println("Loading database...")
-	s.logger = new(lib.Logger)
 	s.db = new(lib.Database)
 	s.db.Connect(*databaseFile)
 	s.games = s.db.GetActiveGames()

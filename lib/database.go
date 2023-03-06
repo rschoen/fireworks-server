@@ -24,10 +24,10 @@ func (db *Database) Connect(dbFile string) {
 	db.dbRef = dbRef
 }
 
-func (db *Database) CreateStatsLog() Logger {
-	l := Logger{}
-	l.Players = make(map[string]PlayerLog)
-	l.Stats = CreateEmptySlicedStatLog()
+func (db *Database) CreateStatsMessage() StatsMessage {
+	sm := StatsMessage{}
+	sm.Players = make(map[string]PlayerStats)
+	sm.Stats = CreateEmptySlicedStatLog()
 
 	rows, err := db.dbRef.Query(`
 								SELECT players.id as id,
@@ -66,23 +66,23 @@ func (db *Database) CreateStatsLog() Logger {
 
 			if id != lastId {
 				lastId = id
-				l.Players[id] = PlayerLog{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()}
+				sm.Players[id] = PlayerStats{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()}
 			}
-			l.Players[id].Stats.ModesAndPlayers[mode][players].FinishedGames += int64(finishedGames)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].BombsLosses += int64(bombsLosses)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].TurnsLosses += int64(turnsLosses)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].NoPlaysLosses += int64(noPlaysLosses)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].FinishedGames += int64(finishedGames)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].BombsLosses += int64(bombsLosses)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].TurnsLosses += int64(turnsLosses)
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].NoPlaysLosses += int64(noPlaysLosses)
 
 			scoreList := scoreListFromString(scoreString)
-			l.Players[id].Stats.ModesAndPlayers[mode][players].Scores = scoreList
+			sm.Players[id].Stats.ModesAndPlayers[mode][players].Scores = scoreList
 		}
 	}
 	{
@@ -118,30 +118,30 @@ func (db *Database) CreateStatsLog() Logger {
 					log.Fatal(err)
 				}
 
-				if !playersListContains(l.Players, id) {
-					l.Players[id] = PlayerLog{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()}
+				if !playersListContains(sm.Players, id) {
+					sm.Players[id] = PlayerStats{ID: id, Name: name, Stats: CreateEmptySlicedStatLog()}
 				}
 
 				if state != StateNotStarted && state != StateStarted {
-					l.Players[id].Stats.ModesAndPlayers[mode][players].FinishedGames += 1
+					sm.Players[id].Stats.ModesAndPlayers[mode][players].FinishedGames += 1
 				}
-				l.Players[id].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
-				l.Players[id].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
 
 				if state == StateBombedOut {
-					l.Players[id].Stats.ModesAndPlayers[mode][players].BombsLosses += 1
+					sm.Players[id].Stats.ModesAndPlayers[mode][players].BombsLosses += 1
 				} else if state == StateDeckEmpty {
-					l.Players[id].Stats.ModesAndPlayers[mode][players].TurnsLosses += 1
+					sm.Players[id].Stats.ModesAndPlayers[mode][players].TurnsLosses += 1
 				} else if state == StateNoPlays {
-					l.Players[id].Stats.ModesAndPlayers[mode][players].NoPlaysLosses += 1
+					sm.Players[id].Stats.ModesAndPlayers[mode][players].NoPlaysLosses += 1
 				}
-				l.Players[id].Stats.ModesAndPlayers[mode][players].Scores[score] += 1
+				sm.Players[id].Stats.ModesAndPlayers[mode][players].Scores[score] += 1
 			}
 		}
 	}
@@ -176,34 +176,34 @@ func (db *Database) CreateStatsLog() Logger {
 			if err != nil {
 				log.Fatal(err)
 			}
-			l.Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
-			l.Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
-			l.Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
-			l.Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
-			l.Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
-			l.Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
-			l.Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
-			l.Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
+			sm.Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
+			sm.Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
+			sm.Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
+			sm.Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
+			sm.Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
+			sm.Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
+			sm.Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
+			sm.Stats.ModesAndPlayers[mode][players].Hints += int64(hints)
 
 			if state != StateNotStarted {
-				l.Stats.ModesAndPlayers[mode][players].FinishedGames += 1
+				sm.Stats.ModesAndPlayers[mode][players].FinishedGames += 1
 			}
 			if state == StateNoPlays {
-				l.Stats.ModesAndPlayers[mode][players].NoPlaysLosses += 1
+				sm.Stats.ModesAndPlayers[mode][players].NoPlaysLosses += 1
 			}
 			if state == StateBombedOut {
-				l.Stats.ModesAndPlayers[mode][players].BombsLosses += 1
+				sm.Stats.ModesAndPlayers[mode][players].BombsLosses += 1
 			}
 			if state == StateDeckEmpty {
-				l.Stats.ModesAndPlayers[mode][players].TurnsLosses += 1
+				sm.Stats.ModesAndPlayers[mode][players].TurnsLosses += 1
 			}
 
 			//scoreList := scoreListFromString(scores)
 
-			if len(l.Stats.ModesAndPlayers[mode][players].Scores) == 0 {
-				l.Stats.ModesAndPlayers[mode][players].Scores = make([]int, PerfectScoreForMode(mode)+1)
+			if len(sm.Stats.ModesAndPlayers[mode][players].Scores) == 0 {
+				sm.Stats.ModesAndPlayers[mode][players].Scores = make([]int, PerfectScoreForMode(mode)+1)
 			}
-			l.Stats.ModesAndPlayers[mode][players].Scores[score] += 1
+			sm.Stats.ModesAndPlayers[mode][players].Scores[score] += 1
 
 			// TODO: modify game_players so that it holds the stats for what the player did in that game
 			// TODO: then we need to go through and sum up what each of the players did in each of the {mode,game} combos
@@ -213,7 +213,7 @@ func (db *Database) CreateStatsLog() Logger {
 		}
 	}
 
-	return l
+	return sm
 }
 
 func scoreListFromString(scoreString string) []int {
@@ -467,7 +467,7 @@ func (db *Database) execQuery(query string, args ...string) {
 	}
 }
 
-func playersListContains(list map[string]PlayerLog, id string) bool {
+func playersListContains(list map[string]PlayerStats, id string) bool {
 	for key, _ := range list {
 		if key == id {
 			return true

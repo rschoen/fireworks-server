@@ -40,6 +40,56 @@ type GamesList struct {
 	PlayersGames []MinimalGame
 }
 
+
+type StatsMessage struct {
+	Players      map[string]PlayerStats
+	LastMoveTime int64
+	Stats        SlicedStatLog
+}
+
+
+type PlayerStats struct {
+	ID    string
+	Name  string
+	Stats SlicedStatLog
+}
+
+type SlicedStatLog struct {
+	ModesAndPlayers [][]StatLog
+}
+
+type StatLog struct {
+	Turns         int64
+	TimedTurns    int64
+	Plays         int64
+	Bombs         int64
+	Discards      int64
+	Hints         int64
+	BombsLosses   int64
+	TurnsLosses   int64
+	NoPlaysLosses int64
+	TurnTime      int64
+	GameTime      int64
+	StartedGames  int64
+	FinishedGames int64
+	Scores        []int
+}
+
+
+func CreateEmptySlicedStatLog() SlicedStatLog {
+	ssl := SlicedStatLog{}
+
+	//ssl.Modes = make([]StatLog, Modes+1, Modes+1)
+	//ssl.NumPlayers = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
+	ssl.ModesAndPlayers = make([][]StatLog, Modes+1, Modes+1)
+
+	for i := 0; i <= Modes; i++ {
+		ssl.ModesAndPlayers[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
+	}
+
+	return ssl
+}
+
 func EncodeList(gl GamesList) (string, string) {
 	b, err := json.Marshal(gl)
 	if err != nil {
@@ -69,54 +119,13 @@ func DecodeMove(s string) (Message, string) {
 	return m, ""
 }
 
-func EncodeLogEntry(le LogEntry) (string, string) {
-	b, err := json.Marshal(le)
-	if err != nil {
-		return "", "Error encoding log entry to JSON string: " + err.Error()
-	}
-
-	return string(b), ""
-}
-
-func DecodeLogEntry(s string) (LogEntry, string) {
-	b := []byte(s)
-	var le LogEntry
-	err := json.Unmarshal(b, &le)
-	if err != nil {
-		return LogEntry{}, "Error decoding log entry from JSON string.\nDecoding string: " + s + "\nError: " + err.Error()
-	}
-
-	return le, ""
-}
-
-func EncodeStatsLog(l Logger) (string, string) {
-	lm := LoggerMessage{Players: l.Players, Stats: l.Stats}
-	b, err := json.Marshal(lm)
+func EncodeStatsMessage(sm StatsMessage) (string, string) {
+	b, err := json.Marshal(sm)
 	if err != nil {
 		return "", "Error encoding stats log to JSON string: " + err.Error()
 	}
 
 	return string(b), ""
-}
-
-func EncodeWholeStatsLog(l *Logger) (string, string) {
-	b, err := json.Marshal(l)
-	if err != nil {
-		return "", "Error encoding stats log to JSON string: " + err.Error()
-	}
-
-	return string(b), ""
-}
-
-func DecodeWholeStatsLog(s string) (Logger, string) {
-	b := []byte(s)
-	var l Logger
-	err := json.Unmarshal(b, &l)
-	if err != nil {
-		return Logger{}, "Error decoding stat logger from JSON string.\nDecoding string: " + s + "\nError: " + err.Error()
-	}
-
-	return l, ""
 }
 
 func DecodeTable(s string) (Table, string) {
