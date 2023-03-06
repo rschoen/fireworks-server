@@ -98,16 +98,20 @@ func createTables(db *sql.DB) {
 						bombs int default 0 not null,
 						discards int default 0 not null,
 						hints int default 0 not null,
-						number_hints int default 0 not null,
-						color_hints int default 0 not null,
 						state int,
 						score int default 0 not null,
 						mode int,
 						players int,
-						game_state_data blob);
+						initialized bool default false not null,
+						public bool default true not null,
+						ignore_time bool default false not null,
+						sigh_button bool default false not null,
+						current_player_index int,
+						table_state blob);
 
 	create table game_players (game_id text references games(id),
 							player_id text references players(id),
+				 			player_index int,
 							primary key (game_id, player_id));
 
 	create table legacy_player_stats (id text references players(id),
@@ -122,8 +126,6 @@ func createTables(db *sql.DB) {
 									bombs int default 0 not null,
 									discards int default 0 not null,
 									hints int default 0 not null,
-									number_hints int default 0 not null,
-									color_hints int default 0 not null,
 									bombs_losses int default 0 not null,
 									turns_losses int default 0 not null,
 									no_plays_losses int default 0 not null,
@@ -147,7 +149,7 @@ func insertPlayer(db *sql.DB, id string, name string) {
 	}
 }
 
-const legacyPlayerStatSql = "insert into legacy_player_stats (id, mode, players, finished_games, turns, timed_turns, turn_time, game_time, plays, bombs, discards, hints, number_hints, color_hints, bombs_losses, turns_losses, no_plays_losses, score_list) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
+const legacyPlayerStatSql = "insert into legacy_player_stats (id, mode, players, finished_games, turns, timed_turns, turn_time, game_time, plays, bombs, discards, hints, bombs_losses, turns_losses, no_plays_losses, score_list) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)"
 
 func insertLegacyPlayerStats(db *sql.DB, id string, mode int, players int, data StatLog) {
 
@@ -164,8 +166,6 @@ func insertLegacyPlayerStats(db *sql.DB, id string, mode int, players int, data 
 		data.Bombs,
 		data.Discards,
 		data.Hints,
-		data.NumberHints,
-		data.ColorHints,
 		data.BombsLosses,
 		data.TurnsLosses,
 		data.NoPlaysLosses,
@@ -208,7 +208,7 @@ func determineFinalState(data StatLog, mode int, score int) int {
 	return -1
 }
 
-const gameInsertSql = "insert into games (id, name, time_started, last_move_time, turns, timed_turns, turn_time, game_time, plays, bombs, discards, hints, number_hints, color_hints, state, score, mode, players) values ($1,$2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)"
+const gameInsertSql = "insert into games (id, name, time_started, last_move_time, turns, timed_turns, turn_time, game_time, plays, bombs, discards, hints, state, score, mode, players) values ($1,$2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)"
 
 func insertGame(db *sql.DB, id string, name string, lastMoveTime int64, data StatLog, state int, gameScore int, mode int, players int) {
 
@@ -227,8 +227,6 @@ func insertGame(db *sql.DB, id string, name string, lastMoveTime int64, data Sta
 		data.Bombs,
 		data.Discards,
 		data.Hints,
-		data.NumberHints,
-		data.ColorHints,
 		state,
 		gameScore,
 		mode,
