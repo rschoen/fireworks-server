@@ -238,10 +238,11 @@ func scoreListFromString(scoreString string) []int {
 	return s1
 }*/
 
-func (db *Database) GetGameListForPlayer(player string) []string {
-	rows, err := db.dbRef.Query(`select game_id from player_games left join on game.id=game_id where (player_id=$1 and state=$2) OR state=$3)`, player, StateStarted, StateNotStarted)
+func (db *Database) GetGamesPlayerIsIn(player string) []string {
+	rows, err := db.dbRef.Query(`select game_id from game_players left join games on games.id=game_id where player_id=$1 and (state=$2 or state=$3)`, player, StateStarted, StateNotStarted)
 
 	if err != nil {
+		log.Println("Error fetching list of games for player.")
 		log.Fatal(err)
 	}
 	defer rows.Close()
@@ -264,7 +265,7 @@ func (db *Database) GetActiveGames() map[string]Game {
 		log.Fatal(err)
 	}
 	defer rows.Close()
-	// TODO: fix this
+
 	var games = make(map[string]Game)
 	var id string
 	for rows.Next() {
@@ -348,8 +349,9 @@ func (db *Database) SaveGameToDatabase(game Game) {
 }
 func (db *Database) CreateGame(game Game) {
 	_, err := db.dbRef.Exec(`insert into games (id, name, time_started,
-		last_move_time, mode, players) values ($1, $2, $3, $4, $5, $6)`,
-		game.ID, game.Name, game.StartTime, game.LastUpdateTime, game.Mode, game.Players)
+		last_move_time, mode, players, state) values ($1, $2, $3, $4, $5, $6, $7)`,
+		game.ID, game.Name, game.StartTime, game.LastUpdateTime, game.Mode,
+		len(game.Players), game.State)
 
 	if err != nil {
 		panic(err)
@@ -357,16 +359,17 @@ func (db *Database) CreateGame(game Game) {
 }
 func (db *Database) AddPlayer(playerId string, gameId string) {
 	var nextIndex = db.GetNumPlayersInGame(gameId)
-	_, err := db.dbRef.Exec(`insert into games (game_id, player_id, index)
+	_, err := db.dbRef.Exec(`insert into game_players (game_id, player_id, player_index)
 			values ($1, $2, $3)`, gameId, playerId, nextIndex)
 	if err != nil {
+		log.Println("Error adding a new player to the game.")
 		panic(err)
 	}
 
 }
 
 func (db *Database) GetNumPlayersInGame(gameId string) int {
-	row := db.dbRef.QueryRow(`select count(index) as players from player_games where game_id=`, gameId)
+	row := db.dbRef.QueryRow(`select count(player_index) as players from game_players where game_id=$1`, gameId)
 
 	var players int
 	switch err := row.Scan(&players); err {
@@ -375,13 +378,14 @@ func (db *Database) GetNumPlayersInGame(gameId string) int {
 	case nil:
 		return players
 	default:
+		log.Println("Error retrieving player indices.")
 		panic(err)
 		return -1
 	}
 }
 
 func (db *Database) GetGamePlayers(id string) []Player {
-	rows, err := db.dbRef.Query(`select player_id,name from player_games left join players on players.id=player_id where game_id=$1 order by index`, id)
+	rows, err := db.dbRef.Query(`select player_id,name from game_players left join players on players.id=player_id where game_id=$1 order by player_index`, id)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -393,6 +397,7 @@ func (db *Database) GetGamePlayers(id string) []Player {
 		var playerId, name string
 		err = rows.Scan(&playerId, &name)
 		if err != nil {
+			log.Println("Error retreiving list of players in game.")
 			log.Fatal(err)
 		}
 		players[i] = Player{GoogleID: id, Name: name}

@@ -64,7 +64,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
 		return
 	}
-	if authResponse.GetGoogleID() != m.Player {
+	if authResponse.GetGoogleID() != m.Player && !s.disableAuth {
 		log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game)
 		fmt.Fprintf(w, jsonError("Authenticated as a different user."))
 		return
@@ -72,11 +72,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if command == "list" {
 		list := lib.GamesList{}
-		games := s.db.GetGameListForPlayer(m.Player)
+		games := s.db.GetGamesPlayerIsIn(m.Player)
 		for _, game := range s.games {
-			if (game.State == lib.StateNotStarted) ||
-				(contains(games, game.ID) && !lib.GameStateIsFinished(game.State) &&
-					len(game.Players) < lib.MaxPlayers && game.Public == true) {
+			if (game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public == true) ||
+				(contains(games, game.ID) && !lib.GameStateIsFinished(game.State)) {
 
 				playerList := ""
 				for player, _ := range s.games[game.ID].Players {
@@ -118,7 +117,9 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, jsonError("Could not initialize game."))
 			return
 		}
+		s.db.CreateGame(game)
 		s.games[game.ID] = game
+		m.Game = game.ID
 		log.Printf("Created new game '%s'\n", m.Game)
 
 		command = "join"
@@ -242,6 +243,7 @@ type Server struct {
 	db              *lib.Database
 	fileServer      bool
 	auth            lib.Authenticator
+	disableAuth     bool
 	clientDirectory string
 }
 
@@ -251,7 +253,6 @@ func main() {
 	// initialize server
 	s := Server{}
 	s.games = make(map[string]lib.Game)
-	s.auth.Initialize()
 
 	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
 	https := flag.Bool("https", false, "Whether to serve everything over HTTPS instead of HTTP")
@@ -261,6 +262,7 @@ func main() {
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
 	databaseFile := flag.String("database", lib.DefaultDatabaseFile, "File to use as database, defaults to "+lib.DefaultDatabaseFile)
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
+	disableAuth := flag.Bool("disable-auth", false, "Disable authentication for testing")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -271,6 +273,9 @@ func main() {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
+
+	s.disableAuth = *disableAuth
+	s.auth.Initialize(*disableAuth)
 
 	s.fileServer = *fileServer
 	s.clientDirectory = *clientDirectory
