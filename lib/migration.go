@@ -112,6 +112,14 @@ func createTables(db *sql.DB) {
 	create table game_players (game_id text references games(id),
 							player_id text references players(id),
 				 			player_index int,
+							turns int default 0 not null,
+							timed_turns int default 0 not null,
+							turn_time int default 0 not null,
+							game_time int default 0 not null,
+							plays int default 0 not null,
+							bombs int default 0 not null,
+							discards int default 0 not null,
+							hints int default 0 not null,
 							primary key (game_id, player_id));
 
 	create table legacy_player_stats (id text references players(id),
