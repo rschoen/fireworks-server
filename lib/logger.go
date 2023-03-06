@@ -3,14 +3,14 @@ package lib
 
 
 type Logger struct {
-	Players      []PlayerLog
+	Players      map[string]PlayerLog
 	LastMoveTime int64
 	Initialized  bool
 	Stats SlicedStatLog
 }
 
 type LoggerMessage struct {
-	Players []PlayerLog
+	Players map[string]PlayerLog
 	Stats   SlicedStatLog
 }
 
