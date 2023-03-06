@@ -102,11 +102,9 @@ func createTables(db *sql.DB) {
 						score int default 0 not null,
 						mode int,
 						players int,
-						initialized bool default false not null,
 						public bool default true not null,
 						ignore_time bool default false not null,
 						sigh_button bool default false not null,
-						current_player_index int,
 						table_state blob);
 
 	create table game_players (game_id text references games(id),
