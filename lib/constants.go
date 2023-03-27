@@ -43,6 +43,7 @@ var numbers = [...]int{0, 3, 2, 2, 2, 1} // this represents the COUNTS of each n
 
 var cardsInHand = [...]int{0, 0, 5, 5, 4, 4} // this represents the COUNTS for each # of players
 const MaxPlayers = 5
+const MaxScoreAllModes = 30
 
 const MaxConcurrentGames = 100
 const MaxStoredGames = 1000

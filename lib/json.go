@@ -82,6 +82,9 @@ func CreateEmptySlicedStatLog() SlicedStatLog {
 
 	for i := 0; i <= Modes; i++ {
 		ssl.ModesAndPlayers[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
+		for j := 0; j <= MaxPlayers; j++ {
+			ssl.ModesAndPlayers[i][j].Scores = make([]int, MaxScoreAllModes+1, MaxScoreAllModes+1)
+		}
 	}
 
 	return ssl
@@ -126,6 +129,9 @@ func EncodeStatsMessage(sm StatsMessage) (string, string) {
 }
 
 func DecodeTable(s string) (Table, string) {
+	if s == "" {
+		return Table{}, ""
+	}
 	b := []byte(s)
 	var table Table
 	err := json.Unmarshal(b, &table)
@@ -136,10 +142,33 @@ func DecodeTable(s string) (Table, string) {
 	return table, ""
 }
 
-func EncodeTable(table Table) (string, string) {
+func EncodeTable(table *Table) (string, string) {
 	b, err := json.Marshal(table)
 	if err != nil {
 		return "", "Error encoding table to JSON string: " + err.Error()
+	}
+
+	return string(b), ""
+}
+
+func DecodePlayerHand(s string) ([]Card, string) {
+	if s == "" {
+		return make([]Card, 0), ""
+	}
+	b := []byte(s)
+	var hand []Card
+	err := json.Unmarshal(b, &hand)
+	if err != nil {
+		return make([]Card, 0), "Error decoding table from JSON string.\nDecoding string: " + s + "\nError: " + err.Error()
+	}
+
+	return hand, ""
+}
+
+func EncodePlayerHand(player Player) (string, string) {
+	b, err := json.Marshal(player.Cards)
+	if err != nil {
+		return "", "Error encoding player hand to JSON string: " + err.Error()
 	}
 
 	return string(b), ""

@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/mattn/go-sqlite3"
 	"strconv"
 	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Database struct {
@@ -57,7 +58,8 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 	{
 		lastId := ""
 		var id, name, scoreString string
-		var mode, players, finishedGames, turns, timedTurns, turnTime, gameTime, plays, bombs, discards, hints, bombsLosses, turnsLosses, noPlaysLosses int
+		var turnTime, gameTime int64
+		var mode, players, finishedGames, turns, timedTurns, plays, bombs, discards, hints, bombsLosses, turnsLosses, noPlaysLosses int
 		for rows.Next() {
 			err = rows.Scan(&id, &name, &mode, &players, &finishedGames, &turns, &timedTurns, &turnTime, &gameTime, &plays, &bombs, &discards, &hints, &bombsLosses, &turnsLosses, &noPlaysLosses, &scoreString)
 			if err != nil {
@@ -92,7 +94,6 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 									game_players.turns,
 									game_players.timed_turns,
 									game_players.turn_time,
-									game_players.game_time,
 									game_players.plays,
 									game_players.bombs,
 									game_players.discards,
@@ -111,9 +112,10 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 		defer rows.Close()
 		{
 			var id, name string
-			var turns, timedTurns, turnTime, gameTime, plays, bombs, discards, hints, score, mode, players, state int
+			var turnTime int64
+			var turns, timedTurns, plays, bombs, discards, hints, score, mode, players, state int
 			for rows.Next() {
-				err = rows.Scan(&id, &name, &turns, &timedTurns, &turnTime, &gameTime, &plays, &bombs, &discards, &hints, &score, &mode, &players, &state)
+				err = rows.Scan(&id, &name, &turns, &timedTurns, &turnTime, &plays, &bombs, &discards, &hints, &score, &mode, &players, &state)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -128,7 +130,6 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 				sm.Players[id].Stats.ModesAndPlayers[mode][players].Turns += int64(turns)
 				sm.Players[id].Stats.ModesAndPlayers[mode][players].TimedTurns += int64(timedTurns)
 				sm.Players[id].Stats.ModesAndPlayers[mode][players].TurnTime += int64(turnTime)
-				sm.Players[id].Stats.ModesAndPlayers[mode][players].GameTime += int64(gameTime)
 				sm.Players[id].Stats.ModesAndPlayers[mode][players].Plays += int64(plays)
 				sm.Players[id].Stats.ModesAndPlayers[mode][players].Bombs += int64(bombs)
 				sm.Players[id].Stats.ModesAndPlayers[mode][players].Discards += int64(discards)
@@ -170,7 +171,8 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 		defer rows.Close()
 
 		var id, name string
-		var last_move_time, mode, players, turns, timedTurns, turnTime, gameTime, plays, bombs, discards, hints, state, score int
+		var turnTime, gameTime int64
+		var last_move_time, mode, players, turns, timedTurns, plays, bombs, discards, hints, state, score int
 		for rows.Next() {
 			err = rows.Scan(&id, &name, &last_move_time, &mode, &players, &turns, &timedTurns, &turnTime, &gameTime, &plays, &bombs, &discards, &hints, &state, &score)
 			if err != nil {
@@ -239,14 +241,13 @@ func scoreListFromString(scoreString string) []int {
 }*/
 
 func (db *Database) GetGamesPlayerIsIn(player string) []string {
-	rows, err := db.dbRef.Query(`select game_id from game_players left join games on games.id=game_id where player_id=$1 and (state=$2 or state=$3)`, player, StateStarted, StateNotStarted)
+	rows, err := db.dbRef.Query(`select game_id from game_players left join games on games.id=game_id where player_id=? and (state=? or state=?)`, player, StateStarted, StateNotStarted)
 
 	if err != nil {
 		log.Println("Error fetching list of games for player.")
 		log.Fatal(err)
 	}
 	defer rows.Close()
-	// TODO: fix this
 	var gameIds = make([]string, 0, MaxConcurrentGames)
 	for rows.Next() {
 		var gameId string
@@ -259,14 +260,14 @@ func (db *Database) GetGamesPlayerIsIn(player string) []string {
 	return gameIds
 }
 
-func (db *Database) GetActiveGames() map[string]Game {
-	rows, err := db.dbRef.Query(`select id from games where state == $1 or state == $2`, StateNotStarted, StateStarted)
+func (db *Database) GetActiveGames() map[string]*Game {
+	rows, err := db.dbRef.Query(`select id from games where state == ? or state == ?`, StateNotStarted, StateStarted)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
 
-	var games = make(map[string]Game)
+	var games = make(map[string]*Game)
 	var id string
 	for rows.Next() {
 		err = rows.Scan(&id)
@@ -278,25 +279,26 @@ func (db *Database) GetActiveGames() map[string]Game {
 	return games
 }
 
-func (db *Database) LookupGameById(id string) Game {
+func (db *Database) LookupGameById(id string) *Game {
 	row := db.dbRef.QueryRow(`select name,
 		state, time_started, last_move_time, turns, timed_turns,
 		turn_time, game_time, plays, bombs, discards, hints,
 		score, mode, players, public, ignore_time, sigh_button, table_state
-		 												from games where id=$1`, id)
+		 												from games where id=?`, id)
 	var name, tableState string
 	var public, ignoreTime, sighButton bool
-	var state, timeStarted, lastMoveTime, turns, timedTurns,
-		turnTime, gameTime, plays, bombs, discards, hints, score, mode, players int
+	var state, lastMoveTime, turns, timedTurns,
+		plays, bombs, discards, hints, score, mode, players int
+	var timeStarted, turnTime, gameTime int64
 
 	switch err := row.Scan(&name,
-		&state, &timeStarted, &lastMoveTime, turns, &timedTurns,
+		&state, &timeStarted, &lastMoveTime, &turns, &timedTurns,
 		&turnTime, &gameTime, &plays, &bombs, &discards, &hints,
 		&score, &mode, &players, &public, &ignoreTime, &sighButton, &tableState); err {
 	case sql.ErrNoRows:
 		fmt.Println("Game not found: " + id)
 	case nil:
-		game := Game{}
+		game := new(Game)
 		game.ID = id
 		game.Name = name
 		game.State = state
@@ -318,11 +320,11 @@ func (db *Database) LookupGameById(id string) Game {
 		game.Stats.Discards = int64(discards)
 		game.Stats.Hints = int64(hints)
 
-		json, err := DecodeTable(tableState)
+		table, err := DecodeTable(tableState)
 		if err != "" {
 			log.Fatal(err)
 		}
-		game.Table = json
+		game.Table = &table
 		game.Players = db.GetGamePlayers(id)
 
 		return game
@@ -330,46 +332,67 @@ func (db *Database) LookupGameById(id string) Game {
 	default:
 		panic(err)
 	}
-	return Game{}
+	return new(Game)
 }
 
-func (db *Database) SaveGameToDatabase(game Game) {
+func (db *Database) SaveGameToDatabase(game *Game) {
 	json, error := EncodeTable(game.Table)
 	if error != "" {
 		log.Fatal(error)
 	}
 
-	_, err := db.dbRef.Exec(`update games set state=$2, last_move_time=$3,
-		score=$4, players=$5, table_state=$6 where id=$1`,
-		game.ID, game.State, game.LastUpdateTime, game.Score, game.Players, json)
+	db.execQuery(`update games set state=?, last_move_time=?,
+		score=?, players=?, table_state=?, time_started=? where id=?`,
+		game.State, game.LastUpdateTime, game.Score, len(game.Players), json, game.StartTime, game.ID)
 
-	if err != nil {
-		panic(err)
+	for _, player := range game.Players {
+		cardJson, cardError := EncodePlayerHand(player)
+		if cardError != "" {
+			log.Fatal(error)
+		}
+
+		db.execQuery(`update game_players set last_move=?, hand_state=? where game_id=? AND player_id=?`, player.LastMove, cardJson, game.ID, player.GoogleID)
 	}
 }
 func (db *Database) CreateGame(game Game) {
-	_, err := db.dbRef.Exec(`insert into games (id, name, time_started,
-		last_move_time, mode, players, state) values ($1, $2, $3, $4, $5, $6, $7)`,
-		game.ID, game.Name, game.StartTime, game.LastUpdateTime, game.Mode,
-		len(game.Players), game.State)
-
-	if err != nil {
-		panic(err)
+	json, error := EncodeTable(game.Table)
+	if error != "" {
+		log.Fatal(error)
 	}
+
+	db.execQuery(`insert into games (id, name, time_started,
+		last_move_time, mode, players, state, table_state) values (?, ?, ?, ?, ?, ?, ?, ?)`,
+		game.ID, game.Name, game.StartTime, game.LastUpdateTime, game.Mode,
+		len(game.Players), game.State, json)
+
 }
 func (db *Database) AddPlayer(playerId string, gameId string) {
 	var nextIndex = db.GetNumPlayersInGame(gameId)
-	_, err := db.dbRef.Exec(`insert into game_players (game_id, player_id, player_index)
-			values ($1, $2, $3)`, gameId, playerId, nextIndex)
-	if err != nil {
-		log.Println("Error adding a new player to the game.")
+	db.execQuery(`insert into game_players (game_id, player_id, player_index)
+			values (?, ?, ?)`, gameId, playerId, nextIndex)
+}
+
+func (db *Database) CreatePlayerIfNotExists(id string, name string) {
+	row := db.dbRef.QueryRow(`select name from players where id=?`, id)
+
+	var foundName string
+	switch err := row.Scan(&foundName); err {
+	case sql.ErrNoRows:
+		db.execQuery(`insert into players (id,name) values (?,?)`, id, name)
+		return
+	case nil:
+		if name != foundName {
+			db.execQuery(`update players set name=? where id=?`, name, id)
+		}
+		return
+	default:
+		log.Println("Error checking if player exists")
 		panic(err)
 	}
-
 }
 
 func (db *Database) GetNumPlayersInGame(gameId string) int {
-	row := db.dbRef.QueryRow(`select count(player_index) as players from game_players where game_id=$1`, gameId)
+	row := db.dbRef.QueryRow(`select count(player_index) as players from game_players where game_id=?`, gameId)
 
 	var players int
 	switch err := row.Scan(&players); err {
@@ -385,22 +408,30 @@ func (db *Database) GetNumPlayersInGame(gameId string) int {
 }
 
 func (db *Database) GetGamePlayers(id string) []Player {
-	rows, err := db.dbRef.Query(`select player_id,name from game_players left join players on players.id=player_id where game_id=$1 order by player_index`, id)
+	rows, err := db.dbRef.Query(`select player_id,name,last_move,hand_state from game_players left join players on players.id=player_id where game_id=? order by player_index`, id)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
 	// TODO: fix this
-	var players = make([]Player, MaxPlayers)
+	var players = make([]Player, 0, MaxPlayers)
 	var i = 0
 	for rows.Next() {
-		var playerId, name string
-		err = rows.Scan(&playerId, &name)
+		var playerId, name, lastMove, handState string
+		err = rows.Scan(&playerId, &name, &lastMove, &handState)
 		if err != nil {
-			log.Println("Error retreiving list of players in game.")
+			log.Println("Error retrieving list of players in game.")
 			log.Fatal(err)
 		}
-		players[i] = Player{GoogleID: id, Name: name}
+
+		cards, jsonErr := DecodePlayerHand(handState)
+		if jsonErr != "" {
+			log.Println("Error decoding player hand state stored in database.")
+			log.Fatal(err)
+		}
+
+		players = append(players, Player{GoogleID: playerId, Name: name, LastMove: lastMove, Cards: cards})
+		log.Printf("Artificially adding player %s (%s) to game %s", name, playerId, id)
 		i++
 	}
 	return players
@@ -410,11 +441,10 @@ func (db *Database) LogMove(g Game, m Message, t int64) string {
 
 	var mainPlayerSql = "turns=turns+1, "
 	var gameSql = "turns=turns+1, "
-	var allPlayersSql = ""
 
 	if !g.IgnoreTime {
-		mainPlayerSql += "timed_turns=timed_turns+1, turn_time=turn_time+" + string(t-g.LastUpdateTime) + ", "
-		gameSql += "timed_turns=timed_turns+1, turn_time=turn_time+" + string(t-g.LastUpdateTime) + ", "
+		mainPlayerSql += "timed_turns=timed_turns+1, turn_time=turn_time+" + fmt.Sprint(t-g.LastUpdateTime) + ", "
+		gameSql += "timed_turns=timed_turns+1, turn_time=turn_time+" + fmt.Sprint(t-g.LastUpdateTime) + ", "
 	}
 
 	if m.MoveType == MovePlay && m.Result == ResultPlay {
@@ -424,31 +454,15 @@ func (db *Database) LogMove(g Game, m Message, t int64) string {
 		mainPlayerSql += "bombs=bombs+1, "
 		gameSql += "bombs=bombs+1, "
 	} else if m.MoveType == MoveDiscard {
-		mainPlayerSql += "discards=dicsards+1, "
-		gameSql += "discards=dicsards+1, "
+		mainPlayerSql += "discards=discards+1, "
+		gameSql += "discards=discards+1, "
 	} else if m.MoveType == MoveHint {
 		mainPlayerSql += "hints=hints+1, "
 		gameSql += "hints=hints+1, "
 	}
 
-	if g.State == StateBombedOut {
-		allPlayersSql += "bomb_losses=bomb_losses+1, "
-	} else if g.State == StateDeckEmpty {
-		mainPlayerSql += "turns_losses=turns_losses+1, "
-	} else if g.State == StateNoPlays {
-		allPlayersSql += "no_plays_losses=no_plays_losses+1, "
-	}
-
-	if g.State == StateBombedOut || g.State == StateDeckEmpty || g.State == StateNoPlays || g.State == StatePerfect {
-		allPlayersSql += "finished_games=finished_games+1, "
-		if !g.IgnoreTime {
-			allPlayersSql += "game_time=game_time+" + string(t-g.StartTime) + ", "
-		}
-	}
-
-	db.execQuery("update players set " + allPlayersSql[:len(allPlayersSql)-2] + " where id in (" + g.GetPlayerListAsString() + ")")
-	db.execQuery("update players set "+mainPlayerSql[:len(mainPlayerSql)-2]+" where id=$1", m.Player)
-	db.execQuery("update game set "+gameSql[:len(gameSql)-2]+" where id=$1", g.ID)
+	db.execQuery("update game_players set "+mainPlayerSql[:len(mainPlayerSql)-2]+" where player_id=? AND game_id=?", m.Player, g.ID)
+	db.execQuery("update games set "+gameSql[:len(gameSql)-2]+" where id=?", g.ID)
 
 	g.LastUpdateTime = t
 	if t > db.LastUpdateTime {
@@ -458,9 +472,19 @@ func (db *Database) LogMove(g Game, m Message, t int64) string {
 	return ""
 }
 
-func (db *Database) execQuery(query string, args ...string) {
-	_, err := db.dbRef.Exec(query, args)
+func (db *Database) execQuery(query string, args ...interface{}) {
+	res, err := db.dbRef.Exec(query, args...)
 	if err != nil {
+		log.Printf("Error executing query: %s", query)
 		log.Fatal(err)
+	} else {
+		rows, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			log.Printf("Error calculating rows affected by query: %s", query)
+			log.Fatal(rowsErr)
+		} else {
+			log.Printf("Ran query: %s", query)
+			log.Printf("AFFECTED %d ROWS", rows)
+		}
 	}
 }

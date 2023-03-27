@@ -3,12 +3,13 @@ package lib
 // game.go was getting big, so I separated some stuff into here
 
 import (
+	"log"
 	"math/rand"
 )
 
 type Table struct {
 	HintsLeft         int
-	BombsBombed       int
+	BombsLeft         int
 	Deck              []Card
 	Discard           []Card
 	Piles             []int
@@ -43,6 +44,9 @@ func (t *Table) PopulateDeck() {
 }
 
 func (t *Table) DrawCard() Card {
+	if len(t.Deck) <= 0 {
+		log.Fatal("Attempting to draw card from empty deck!")
+	}
 	index := rand.Intn(len(t.Deck))
 	card := t.Deck[index]
 	t.Deck = append(t.Deck[:index], t.Deck[index+1:]...)

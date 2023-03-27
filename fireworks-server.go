@@ -21,7 +21,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	apiPrefix := "/apiv2/"
 	if len(r.URL.Path) >= len(apiPrefix) && r.URL.Path[:len(apiPrefix)] == apiPrefix {
-		// nuttin
+		// nothing
 	} else if s.fileServer {
 		// serve client HTTP responses, if it's turned on
 		http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
@@ -54,8 +54,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, jsonError("Data sent was malformed."))
 		return
 	}
-	var game lib.Game
-	// TODO: function to look up game in DB
+	var selectedGame *lib.Game
 
 	// Authenticate user
 	authResponse, authError := s.auth.Authenticate(m.Token)
@@ -106,27 +105,26 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "create" {
-		// TODO: store this in database!!! the correct way
-		game = lib.Game{}
-		game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
-		game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+		selectedGame = new(lib.Game)
+		selectedGame.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
+		selectedGame.ID = selectedGame.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 
-		var initializationError = game.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode)
+		var initializationError = selectedGame.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode)
 		if initializationError != "" {
 			log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
 			fmt.Fprintf(w, jsonError("Could not initialize game."))
 			return
 		}
-		s.db.CreateGame(game)
-		s.games[game.ID] = game
-		m.Game = game.ID
+		s.db.CreateGame(*selectedGame)
+		s.games[selectedGame.ID] = selectedGame
+		m.Game = selectedGame.ID
 		log.Printf("Created new game '%s'\n", m.Game)
 
 		command = "join"
 	}
 
 	if _, ok := s.games[m.Game]; ok {
-		game = s.games[m.Game]
+		selectedGame = s.games[m.Game]
 	} else {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
 		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
@@ -134,27 +132,29 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "join" {
-		player := game.GetPlayerByGoogleID(m.Player)
+		player := selectedGame.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
-			if len(game.Players) >= lib.MaxPlayers {
+			log.Printf("Player not in game already, adding now!")
+			if len(selectedGame.Players) >= lib.MaxPlayers {
 				log.Printf("Attempting to add player '%s' to full game '%s'\n", m.Player, m.Game)
 				fmt.Fprintf(w, jsonError("This game is now full."))
 				return
 			}
 			playerName := sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true)
-			addError := game.AddPlayer(m.Player, playerName)
-			s.db.AddPlayer(m.Player, game.ID)
+			addError := selectedGame.AddPlayer(m.Player, playerName)
+			s.db.CreatePlayerIfNotExists(m.Player, playerName)
+			s.db.AddPlayer(m.Player, selectedGame.ID)
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
 				fmt.Fprintf(w, jsonError("Unable to join this game."))
 				return
 			}
-			log.Printf("Added player '%s' to game '%s'\n", playerName, game.Name)
+			log.Printf("Added player '%s' to game '%s'\n", playerName, selectedGame.Name)
 		}
 	}
 
-	player := game.GetPlayerByGoogleID(m.Player)
+	player := selectedGame.GetPlayerByGoogleID(m.Player)
 
 	if player == nil {
 		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)
@@ -163,22 +163,24 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "start" {
-		if game.State != lib.StateNotStarted {
+		if selectedGame.State != lib.StateNotStarted {
 			log.Printf("Attempting to start already started game '%s'\n", m.Game)
 			fmt.Fprintf(w, jsonError("This game has already started."))
 			return
 		}
-		var startError = game.Start()
+		log.Printf("Gonna start game %s with table %+v", selectedGame.ID, selectedGame.Table)
+		var startError = selectedGame.Start()
 		if startError != "" {
 			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
 			fmt.Fprintf(w, jsonError("Could not start game."))
 			return
 		}
+		s.db.SaveGameToDatabase(selectedGame)
 		log.Printf("Started game '%s'\n", m.Game)
 	}
 
 	if command == "announce" {
-		var processError = game.ProcessAnnouncement(&m)
+		var processError = selectedGame.ProcessAnnouncement(&m)
 		if processError != "" {
 			log.Printf("Failed to process announcement for game '%s'. Error: %s\n", m.Game, processError)
 			fmt.Fprintf(w, jsonError("Could not process announcement."))
@@ -189,31 +191,31 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if command == "move" {
 
-		var processError = game.ProcessMove(&m)
+		var processError = selectedGame.ProcessMove(&m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
 			fmt.Fprintf(w, jsonError("Could not process move."))
 			return
 		}
-		logError := s.db.LogMove(game, m, time.Now().Unix())
+		logError := s.db.LogMove(*selectedGame, m, time.Now().Unix())
 		if logError != "" {
 			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
 			fmt.Fprintf(w, jsonError("Could not log move."))
 			return
 		}
-		s.db.SaveGameToDatabase(game)
+		s.db.SaveGameToDatabase(selectedGame)
 		player.PushToken = m.PushToken
 		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
 	if command == "status" {
-		if m.LastTurn == game.Table.Turn && m.UpdateTime == game.LastUpdateTime {
+		if m.LastTurn == selectedGame.Table.Turn && m.UpdateTime == selectedGame.LastUpdateTime {
 			fmt.Fprintf(w, "")
 			return
 		}
 	}
 
-	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
+	encodedGame, err := lib.EncodeGame(selectedGame.CreateState(m.Player))
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
 		fmt.Fprintf(w, jsonError("Could not transmit game state to client."))
@@ -239,7 +241,7 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 }
 
 type Server struct {
-	games           map[string]lib.Game
+	games           map[string]*lib.Game
 	db              *lib.Database
 	fileServer      bool
 	auth            lib.Authenticator
@@ -252,7 +254,7 @@ func main() {
 
 	// initialize server
 	s := Server{}
-	s.games = make(map[string]lib.Game)
+	s.games = make(map[string]*lib.Game)
 
 	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
 	https := flag.Bool("https", false, "Whether to serve everything over HTTPS instead of HTTP")
@@ -296,8 +298,6 @@ func main() {
 	}
 
 }
-
-//delete when you find the right one...
 
 func contains(list []string, element string) bool {
 	for _, elementToCheck := range list {

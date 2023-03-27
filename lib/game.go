@@ -2,27 +2,28 @@ package lib
 
 import (
 	"fmt"
-	"github.com/NaySoftware/go-fcm"
+	"log"
 	"math/rand"
 	"strconv"
 	"time"
+
+	"github.com/NaySoftware/go-fcm"
 )
 
 type Game struct {
-	ID          string
-	Name        string
-	Players     []Player
-	Initialized bool
-	Public      bool
-	IgnoreTime  bool
-	SighButton  bool
+	ID         string
+	Name       string
+	Players    []Player
+	Public     bool
+	IgnoreTime bool
+	SighButton bool
 
 	State          int
 	StartTime      int64
 	LastUpdateTime int64
 	Mode           int
 	CurrentScore   int
-	Table          Table
+	Table          *Table
 	Score          int
 
 	Stats StatLog
@@ -30,7 +31,7 @@ type Game struct {
 
 func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMode int) string {
 	g.State = StateNotStarted
-	g.Table = Table{}
+	g.Table = new(Table)
 
 	// validate input
 	if gameMode != ModeNormal && gameMode != ModeRainbow && gameMode != ModeWildcard && gameMode != ModeHard && gameMode != ModeRainbowLimited {
@@ -52,6 +53,9 @@ func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMod
 	g.Table.Discard = make([]Card, 0, maxCards)
 	g.Table.Piles = make([]int, len(g.Table.Colors), len(g.Table.Colors))
 
+	g.Table.BombsLeft = StartingBombs
+	g.Table.HintsLeft = StartingHints
+
 	g.Table.Mode = gameMode
 	g.Table.NumPlayers = 0
 
@@ -67,14 +71,10 @@ func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMod
 	// start with no Players
 	g.Players = make([]Player, 0, len(cardsInHand)-1)
 	g.Table.HighestPossibleScore = g.GetHighestPossibleScore()
-	g.Initialized = true
 	return ""
 }
 
 func (g *Game) AddPlayer(id string, name string) string {
-	if !g.Initialized {
-		return "Attempting to add player before game has been fully initialized."
-	}
 	if g.State != StateNotStarted {
 		return "Attempting to add players after game has started."
 	}
@@ -89,9 +89,6 @@ func (g *Game) AddPlayer(id string, name string) string {
 }
 
 func (g *Game) Start() string {
-	if !g.Initialized {
-		return "Attempting to start before game has been fully Initialized."
-	}
 	if g.State != StateNotStarted {
 		return "Attempting to start a game that has already been started."
 	}
@@ -101,6 +98,10 @@ func (g *Game) Start() string {
 		return "Attempted to start game with invalid number of players."
 	}
 	g.Table.NumPlayers = numPlayers
+
+	if len(g.Table.Deck) <= 0 {
+		log.Fatal("Drawing card on empty deck!")
+	}
 
 	// create hands
 	for index, _ := range g.Players {
@@ -117,6 +118,7 @@ func (g *Game) Start() string {
 	g.Table.CurrentPlayerIndex = rand.Intn(numPlayers)
 	g.State = StateStarted
 	g.StartTime = time.Now().Unix()
+	g.LastUpdateTime = g.StartTime
 	g.Table.Turn++
 	g.SendCurrentPlayerNotification()
 
@@ -191,8 +193,8 @@ func (g *Game) ProcessMove(mp *Message) string {
 		} else {
 			// play was unsuccessful :(
 			mp.Result = ResultBomb
-			g.Table.BombsBombed--
-			if g.Table.BombsBombed == 0 {
+			g.Table.BombsLeft--
+			if g.Table.BombsLeft == 0 {
 				g.State = StateBombedOut
 			}
 			g.Table.Discard = append(g.Table.Discard, card)
@@ -284,6 +286,11 @@ func (g *Game) CreateState(playerid string) Game {
 	gCopy = *g
 
 	// clear the Deck (could be used to determine your hand)
+
+	tCopy := Table{}
+	tCopy = *g.Table
+	gCopy.Table = &tCopy
+
 	gCopy.Table.CardsLeft = len(gCopy.Table.Deck)
 	gCopy.Table.Deck = make([]Card, 0, 0)
 
