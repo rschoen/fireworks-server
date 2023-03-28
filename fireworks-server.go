@@ -44,14 +44,19 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Failed to encode stats log. Error: %s\n", err)
 			return
 		}
-		fmt.Fprintf(w, json)
+		fmt.Fprint(w, json)
+		return
+	}
+	if command == "clean" {
+		s.db.CleanupUnstartedGames()
+		fmt.Fprint(w, "")
 		return
 	}
 
 	m, err := lib.DecodeMove(r.PostFormValue("data"))
 	if err != "" {
 		log.Println("Discarding malformed JSON message. Error: " + err)
-		fmt.Fprintf(w, jsonError("Data sent was malformed."))
+		fmt.Fprint(w, jsonError("Data sent was malformed."))
 		return
 	}
 	var selectedGame *lib.Game
@@ -60,12 +65,12 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	authResponse, authError := s.auth.Authenticate(m.Token)
 	if authError != "" {
 		log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
-		fmt.Fprintf(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
+		fmt.Fprint(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
 		return
 	}
 	if authResponse.GetGoogleID() != m.Player && !s.disableAuth {
 		log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game)
-		fmt.Fprintf(w, jsonError("Authenticated as a different user."))
+		fmt.Fprint(w, jsonError("Authenticated as a different user."))
 		return
 	}
 
@@ -92,7 +97,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		joinableGames := s.db.GetJoinableGames()
 		for _, gameId := range joinableGames {
 			game := s.games[gameId]
-			if game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public == true {
+			if game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public {
 
 				playerList := ""
 				for player := range game.Players {
@@ -110,10 +115,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		encodedList, err := lib.EncodeList(list)
 		if err != "" {
 			log.Printf("Failed to encode game list. Error: %s\n", err)
-			fmt.Fprintf(w, jsonError("Could not transmit game list to client."))
+			fmt.Fprint(w, jsonError("Could not transmit game list to client."))
 			return
 		}
-		fmt.Fprintf(w, encodedList)
+		fmt.Fprint(w, encodedList)
 		return
 	}
 
@@ -125,7 +130,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		var initializationError = selectedGame.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode)
 		if initializationError != "" {
 			log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
-			fmt.Fprintf(w, jsonError("Could not initialize game."))
+			fmt.Fprint(w, jsonError("Could not initialize game."))
 			return
 		}
 		s.db.CreateGame(*selectedGame)
@@ -140,7 +145,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		selectedGame = s.games[m.Game]
 	} else {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
-		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
+		fmt.Fprint(w, jsonError("The game you're attempting to play no longer exists."))
 		return
 	}
 
@@ -151,7 +156,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Player not in game already, adding now!")
 			if len(selectedGame.Players) >= lib.MaxPlayers {
 				log.Printf("Attempting to add player '%s' to full game '%s'\n", m.Player, m.Game)
-				fmt.Fprintf(w, jsonError("This game is now full."))
+				fmt.Fprint(w, jsonError("This game is now full."))
 				return
 			}
 			playerName := sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true)
@@ -160,7 +165,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			s.db.AddPlayer(m.Player, selectedGame.ID)
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
-				fmt.Fprintf(w, jsonError("Unable to join this game."))
+				fmt.Fprint(w, jsonError("Unable to join this game."))
 				return
 			}
 			log.Printf("Added player '%s' to game '%s'\n", playerName, selectedGame.Name)
@@ -171,21 +176,21 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if player == nil {
 		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)
-		fmt.Fprintf(w, jsonError("You're not a member of this game."))
+		fmt.Fprint(w, jsonError("You're not a member of this game."))
 		return
 	}
 
 	if command == "start" {
 		if selectedGame.State != lib.StateNotStarted {
 			log.Printf("Attempting to start already started game '%s'\n", m.Game)
-			fmt.Fprintf(w, jsonError("This game has already started."))
+			fmt.Fprint(w, jsonError("This game has already started."))
 			return
 		}
 		log.Printf("Gonna start game %s with table %+v", selectedGame.ID, selectedGame.Table)
 		var startError = selectedGame.Start()
 		if startError != "" {
 			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
-			fmt.Fprintf(w, jsonError("Could not start game."))
+			fmt.Fprint(w, jsonError("Could not start game."))
 			return
 		}
 		s.db.SaveGameToDatabase(selectedGame)
@@ -196,7 +201,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		var processError = selectedGame.ProcessAnnouncement(&m)
 		if processError != "" {
 			log.Printf("Failed to process announcement for game '%s'. Error: %s\n", m.Game, processError)
-			fmt.Fprintf(w, jsonError("Could not process announcement."))
+			fmt.Fprint(w, jsonError("Could not process announcement."))
 			return
 		}
 		log.Printf("Processed announcement by player '%s' in game '%s'\n", m.Player, m.Game)
@@ -207,13 +212,13 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		var processError = selectedGame.ProcessMove(&m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
-			fmt.Fprintf(w, jsonError("Could not process move."))
+			fmt.Fprint(w, jsonError("Could not process move."))
 			return
 		}
 		logError := s.db.LogMove(*selectedGame, m, time.Now().Unix())
 		if logError != "" {
 			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
-			fmt.Fprintf(w, jsonError("Could not log move."))
+			fmt.Fprint(w, jsonError("Could not log move."))
 			return
 		}
 		s.db.SaveGameToDatabase(selectedGame)
@@ -223,7 +228,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if command == "status" {
 		if m.LastTurn == selectedGame.Table.Turn && m.UpdateTime == selectedGame.LastUpdateTime {
-			fmt.Fprintf(w, "")
+			fmt.Fprint(w, "")
 			return
 		}
 	}
@@ -231,10 +236,10 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	encodedGame, err := lib.EncodeGame(selectedGame.CreateState(m.Player))
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
-		fmt.Fprintf(w, jsonError("Could not transmit game state to client."))
+		fmt.Fprint(w, jsonError("Could not transmit game state to client."))
 		return
 	}
-	fmt.Fprintf(w, encodedGame)
+	fmt.Fprint(w, encodedGame)
 }
 
 func jsonError(err string) string {
@@ -242,9 +247,9 @@ func jsonError(err string) string {
 }
 
 func sanitizeAndTrim(text string, limit int, oneword bool) string {
-	re := regexp.MustCompile("[^A-Za-z0-9 _!,\\.-]+")
+	re := regexp.MustCompile(`[^A-Za-z0-9 _!,\.-]+`)
 	text = re.ReplaceAllString(text, "")
-	if oneword && strings.Index(text, " ") > -1 {
+	if oneword && strings.Contains(text, " ") {
 		text = text[:strings.Index(text, " ")]
 	}
 	if len(text) > limit {
@@ -310,13 +315,4 @@ func main() {
 		log.Fatal(http.ListenAndServe(portString, nil))
 	}
 
-}
-
-func contains(list []string, element string) bool {
-	for _, elementToCheck := range list {
-		if elementToCheck == element {
-			return true
-		}
-	}
-	return false
 }

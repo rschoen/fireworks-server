@@ -350,8 +350,7 @@ func (db *Database) execQuery(query string, args ...interface{}) {
 	}
 }
 
-func (db *Database) cleanup() {
-	// NOT CURRENTLY IN USE
+func (db *Database) CleanupUnstartedGames() {
 	db.openTransaction()
 	db.execWithinTransaction(`delete from games where state=?`, StateNotStarted)
 	db.execWithinTransaction(`delete from game_players where game_id in (select game_id from game_players left join games on game_id=id where id is null)`)

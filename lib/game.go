@@ -86,7 +86,7 @@ func (g *Game) Start() string {
 	}
 
 	// create hands
-	for index, _ := range g.Players {
+	for index := range g.Players {
 		g.Players[index].Initialize(cardsInHand[numPlayers])
 		for i := 0; i < cardsInHand[numPlayers]; i++ {
 			err := g.Players[index].AddCard(g.Table.DrawCard())
@@ -274,13 +274,13 @@ func (g *Game) CreateState(playerid string) Game {
 	gCopy.Table = &tCopy
 
 	gCopy.Table.CardsLeft = len(gCopy.Table.Deck)
-	gCopy.Table.Deck = make([]Card, 0, 0)
+	gCopy.Table.Deck = make([]Card, 0)
 
 	// clear your hand, except for revealed info
-	newPlayers := make([]Player, len(g.Players), len(g.Players))
+	newPlayers := make([]Player, len(g.Players))
 	for playerIndex, player := range gCopy.Players {
 		if p.GoogleID == player.GoogleID {
-			newHand := make([]Card, len(player.Cards), len(player.Cards))
+			newHand := make([]Card, len(player.Cards))
 			for cardIndex, card := range player.Cards {
 				card.Color = ""
 				card.Number = 0
@@ -299,7 +299,7 @@ func (g *Game) GetPlayerByGoogleID(id string) *Player {
 	if g.Players == nil {
 		return p
 	}
-	for index, _ := range g.Players {
+	for index := range g.Players {
 		if g.Players[index].GoogleID == id {
 			return &g.Players[index]
 		}
@@ -349,7 +349,7 @@ func (g *Game) AnyPlayableCards() bool {
 		return true
 	}
 
-	for i, _ := range g.Players {
+	for i := range g.Players {
 		if g.Table.TurnsLeft != -1 && i >= g.Table.TurnsLeft {
 			break
 		}
@@ -378,7 +378,7 @@ func (g *Game) GetHighestPossibleScore() int {
 		cards = append(cards, player.Cards...)
 	}
 
-	piles := make([]int, len(g.Table.Piles), len(g.Table.Piles))
+	piles := make([]int, len(g.Table.Piles))
 	for i, value := range g.Table.Piles {
 		piles[i] = value
 	}

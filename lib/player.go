@@ -23,7 +23,7 @@ func (p *Player) ReceiveHint(i int, infoType int, hintColor string, mode int) ([
 	if color == "rainbow" {
 		color = hintColor
 	}
-	for index, _ := range p.Cards {
+	for index := range p.Cards {
 		addCard := false
 		if infoType == HintNumber && p.Cards[index].Number == number {
 			p.Cards[index].KnownNumber = number
@@ -54,7 +54,7 @@ func (p *Player) GetCard(i int) (Card, string) {
 }
 
 func (p *Player) GetCardByID(id int) Card {
-	for index, _ := range p.Cards {
+	for index := range p.Cards {
 		if p.Cards[index].ID == id {
 			return p.Cards[index]
 		}

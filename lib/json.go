@@ -70,12 +70,12 @@ type StatLog struct {
 }
 
 func CreateEmptyStatsArray() [][]StatLog {
-	stats := make([][]StatLog, Modes+1, Modes+1)
+	stats := make([][]StatLog, Modes+1)
 
 	for i := 0; i <= Modes; i++ {
-		stats[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
+		stats[i] = make([]StatLog, MaxPlayers+1)
 		for j := 0; j <= MaxPlayers; j++ {
-			stats[i][j].Scores = make([]int, MaxScoreAllModes+1, MaxScoreAllModes+1)
+			stats[i][j].Scores = make([]int, MaxScoreAllModes+1)
 		}
 	}
 	return stats

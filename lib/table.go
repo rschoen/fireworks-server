@@ -37,7 +37,7 @@ func (t *Table) Initialize(gameMode int) {
 	maxCards := t.MaxCards()
 	t.PopulateDeck(maxCards)
 	t.Discard = make([]Card, 0, maxCards)
-	t.Piles = make([]int, len(t.Colors), len(t.Colors))
+	t.Piles = make([]int, len(t.Colors))
 
 	t.BombsLeft = StartingBombs
 	t.HintsLeft = StartingHints
@@ -48,7 +48,7 @@ func (t *Table) Initialize(gameMode int) {
 }
 
 func (t *Table) PopulateDeck(maxCards int) {
-	t.Deck = make([]Card, maxCards, maxCards)
+	t.Deck = make([]Card, maxCards)
 	i := 0
 	for number, count := range numbers {
 		for _, color := range t.Colors {
