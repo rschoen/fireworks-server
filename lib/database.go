@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -14,6 +15,7 @@ import (
 type Database struct {
 	dbRef          *sql.DB
 	LastUpdateTime int64
+	tx             *sql.Tx
 }
 
 func (db *Database) Connect(dbFile string) {
@@ -23,6 +25,55 @@ func (db *Database) Connect(dbFile string) {
 		log.Fatal(err)
 	}
 	db.dbRef = dbRef
+	db.tx = nil
+}
+
+func (db *Database) openTransaction() {
+	if db.tx != nil {
+		log.Fatal("Attempting to open a transaction when one is already open. Quitting.")
+	}
+	var err error
+	db.tx, err = db.dbRef.BeginTx(context.Background(), nil)
+	if err != nil {
+		log.Print("Error opening transaction:")
+		log.Fatal(err)
+	}
+	log.Print("OPENED TRANSACTION")
+}
+
+func (db *Database) execWithinTransaction(query string, args ...interface{}) {
+	if db.tx == nil {
+		log.Fatal("Attempting to execute a query within a transaction without an open transaction. Quitting")
+	}
+	res, err := db.tx.Exec(query, args...)
+	if err != nil {
+		db.tx.Rollback()
+		log.Printf("Error executing query: %s", query)
+		log.Fatal(err)
+	} else {
+		rows, rowsErr := res.RowsAffected()
+		if rowsErr != nil {
+			db.tx.Rollback()
+			log.Printf("Error calculating rows affected by query: %s", query)
+			log.Fatal(rowsErr)
+		} else {
+			log.Printf("Ran transaction query: %s", query)
+			log.Printf("AFFECTED %d ROWS", rows)
+		}
+	}
+}
+
+func (db *Database) closeTransaction() {
+	if db.tx == nil {
+		log.Fatal("Attempting to close transaction without an open transaction. Quitting")
+	}
+	err := db.tx.Commit()
+	if err != nil {
+		log.Print("Error closing transaction:")
+		log.Fatal(err)
+	}
+	db.tx = nil
+	log.Print("TRANSACTION CLOSED")
 }
 
 func (db *Database) CreateStatsMessage() StatsMessage {
@@ -360,7 +411,9 @@ func (db *Database) SaveGameToDatabase(game *Game) {
 		log.Fatal(error)
 	}
 
-	db.execQuery(`update games set state=?, last_move_time=?,
+	db.openTransaction()
+
+	db.execWithinTransaction(`update games set state=?, last_move_time=?,
 		score=?, players=?, table_state=?, time_started=? where id=?`,
 		game.State, game.LastUpdateTime, game.Score, len(game.Players), json, game.StartTime, game.ID)
 
@@ -370,8 +423,10 @@ func (db *Database) SaveGameToDatabase(game *Game) {
 			log.Fatal(error)
 		}
 
-		db.execQuery(`update game_players set last_move=?, hand_state=? where game_id=? AND player_id=?`, player.LastMove, cardJson, game.ID, player.GoogleID)
+		db.execWithinTransaction(`update game_players set last_move=?, hand_state=? where game_id=? AND player_id=?`, player.LastMove, cardJson, game.ID, player.GoogleID)
 	}
+
+	db.closeTransaction()
 }
 func (db *Database) CreateGame(game Game) {
 	json, error := EncodeTable(game.Table)
@@ -387,9 +442,12 @@ func (db *Database) CreateGame(game Game) {
 }
 func (db *Database) AddPlayer(playerId string, gameId string) {
 	var nextIndex = db.GetNumPlayersInGame(gameId)
-	db.execQuery(`insert into game_players (game_id, player_id, player_index)
+
+	db.openTransaction()
+	db.execWithinTransaction(`insert into game_players (game_id, player_id, player_index)
 			values (?, ?, ?)`, gameId, playerId, nextIndex)
-	db.execQuery(`update games set players=players+1 where id=?`, gameId)
+	db.execWithinTransaction(`update games set players=players+1 where id=?`, gameId)
+	db.closeTransaction()
 }
 
 func (db *Database) CreatePlayerIfNotExists(id string, name string) {
@@ -481,8 +539,10 @@ func (db *Database) LogMove(g Game, m Message, t int64) string {
 		gameSql += "hints=hints+1, "
 	}
 
-	db.execQuery("update game_players set "+mainPlayerSql[:len(mainPlayerSql)-2]+" where player_id=? AND game_id=?", m.Player, g.ID)
-	db.execQuery("update games set "+gameSql[:len(gameSql)-2]+" where id=?", g.ID)
+	db.openTransaction()
+	db.execWithinTransaction("update game_players set "+mainPlayerSql[:len(mainPlayerSql)-2]+" where player_id=? AND game_id=?", m.Player, g.ID)
+	db.execWithinTransaction("update games set "+gameSql[:len(gameSql)-2]+" where id=?", g.ID)
+	db.closeTransaction()
 
 	g.LastUpdateTime = t
 	if t > db.LastUpdateTime {
@@ -507,4 +567,12 @@ func (db *Database) execQuery(query string, args ...interface{}) {
 			log.Printf("AFFECTED %d ROWS", rows)
 		}
 	}
+}
+
+func (db *Database) cleanup() {
+	// NOT CURRENTLY IN USE
+	db.openTransaction()
+	db.execWithinTransaction(`delete from games where state=?`, StateNotStarted)
+	db.execWithinTransaction(`delete from game_players where game_id in (select game_id from game_players left join games on game_id=id where id is null)`)
+	db.closeTransaction()
 }
