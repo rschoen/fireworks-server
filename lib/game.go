@@ -37,35 +37,17 @@ func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMod
 	if gameMode != ModeNormal && gameMode != ModeRainbow && gameMode != ModeWildcard && gameMode != ModeHard && gameMode != ModeRainbowLimited {
 		gameMode = ModeNormal
 	}
-
-	// figure out how many cards are in the Deck
-	if gameMode == ModeNormal {
-		g.Table.Colors = normalColors[:]
-	} else {
-		g.Table.Colors = rainbowColors[:]
-	}
 	g.Mode = gameMode
-	maxCards := g.Table.MaxCards()
 
 	// populate the Deck, Discard, and Piles
-	g.Table.Deck = make([]Card, maxCards, maxCards)
-	g.Table.Mode = gameMode
-	g.Table.PopulateDeck()
-	g.Table.Discard = make([]Card, 0, maxCards)
-	g.Table.Piles = make([]int, len(g.Table.Colors), len(g.Table.Colors))
 
-	g.Table.BombsLeft = StartingBombs
-	g.Table.HintsLeft = StartingHints
-
-	g.Table.NumPlayers = 0
+	g.Table.Initialize(gameMode)
 
 	// set starting values
 	g.Public = public
 	g.IgnoreTime = ignoreTime
 	g.SighButton = sighButton
 	g.Mode = gameMode
-	g.Table.TurnsLeft = -1
-	g.Table.Turn = 0
 	g.LastUpdateTime = -1
 
 	// start with no Players

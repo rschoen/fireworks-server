@@ -26,7 +26,31 @@ type Table struct {
 	Mode                 int
 }
 
-func (t *Table) PopulateDeck() {
+func (t *Table) Initialize(gameMode int) {
+	t.Mode = gameMode
+
+	// figure out how many cards are in the Deck
+	if gameMode == ModeNormal {
+		t.Colors = normalColors[:]
+	} else {
+		t.Colors = rainbowColors[:]
+	}
+
+	maxCards := t.MaxCards()
+	t.PopulateDeck(maxCards)
+	t.Discard = make([]Card, 0, maxCards)
+	t.Piles = make([]int, len(t.Colors), len(t.Colors))
+
+	t.BombsLeft = StartingBombs
+	t.HintsLeft = StartingHints
+
+	t.NumPlayers = 0
+	t.TurnsLeft = -1
+	t.Turn = 0
+}
+
+func (t *Table) PopulateDeck(maxCards int) {
+	t.Deck = make([]Card, maxCards, maxCards)
 	i := 0
 	for number, count := range numbers {
 		for _, color := range t.Colors {
@@ -40,6 +64,9 @@ func (t *Table) PopulateDeck() {
 				i++
 			}
 		}
+	}
+	if i != maxCards {
+		log.Fatal("Initialized incorrect number of cards. Self-destructing!!")
 	}
 }
 

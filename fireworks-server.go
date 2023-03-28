@@ -71,26 +71,39 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if command == "list" {
 		list := lib.GamesList{}
-		games := s.db.GetGamesPlayerIsIn(m.Player)
-		for _, game := range s.games {
-			if (game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public == true) ||
-				(contains(games, game.ID) && !lib.GameStateIsFinished(game.State)) {
+		playersGames := s.db.GetGamesPlayerIsIn(m.Player)
+		for _, gameId := range playersGames {
+			game := s.games[gameId]
+			if !lib.GameStateIsFinished(game.State) {
 
 				playerList := ""
-				for player, _ := range s.games[game.ID].Players {
-					playerList += s.games[game.ID].Players[player].Name + ", "
+				for player, _ := range game.Players {
+					playerList += game.Players[player].Name + ", "
 				}
 
 				if playerList != "" {
 					playerList = playerList[:len(playerList)-2]
 				}
-				game := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+				gameMessage := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+				list.PlayersGames = append(list.PlayersGames, gameMessage)
+			}
+		}
 
-				if contains(games, game.ID) {
-					list.PlayersGames = append(list.PlayersGames, game)
-				} else {
-					list.OpenGames = append(list.OpenGames, game)
+		joinableGames := s.db.GetJoinableGames()
+		for _, gameId := range joinableGames {
+			game := s.games[gameId]
+			if game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public == true {
+
+				playerList := ""
+				for player, _ := range game.Players {
+					playerList += game.Players[player].Name + ", "
 				}
+
+				if playerList != "" {
+					playerList = playerList[:len(playerList)-2]
+				}
+				gameMessage := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+				list.OpenGames = append(list.OpenGames, gameMessage)
 			}
 		}
 

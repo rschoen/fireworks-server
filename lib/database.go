@@ -241,10 +241,29 @@ func scoreListFromString(scoreString string) []int {
 }*/
 
 func (db *Database) GetGamesPlayerIsIn(player string) []string {
-	rows, err := db.dbRef.Query(`select game_id from game_players left join games on games.id=game_id where player_id=? and (state=? or state=?)`, player, StateStarted, StateNotStarted)
+	rows, err := db.dbRef.Query(`select game_id from game_players left join games on games.id=game_id where player_id=? and (state=? or state=?) order by time_started desc`, player, StateStarted, StateNotStarted)
 
 	if err != nil {
 		log.Println("Error fetching list of games for player.")
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	var gameIds = make([]string, 0, MaxConcurrentGames)
+	for rows.Next() {
+		var gameId string
+		err = rows.Scan(&gameId)
+		if err != nil {
+			log.Fatal(err)
+		}
+		gameIds = append(gameIds, gameId)
+	}
+	return gameIds
+}
+func (db *Database) GetJoinableGames() []string {
+	rows, err := db.dbRef.Query(`select id from games where state=? AND public=1 AND players<? order by time_started desc`, StateNotStarted, MaxPlayers)
+
+	if err != nil {
+		log.Println("Error fetching list of joinable games.")
 		log.Fatal(err)
 	}
 	defer rows.Close()
@@ -361,15 +380,16 @@ func (db *Database) CreateGame(game Game) {
 	}
 
 	db.execQuery(`insert into games (id, name, time_started,
-		last_move_time, mode, players, state, table_state) values (?, ?, ?, ?, ?, ?, ?, ?)`,
+		last_move_time, mode, players, state, table_state, public, ignore_time, sigh_button) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		game.ID, game.Name, game.StartTime, game.LastUpdateTime, game.Mode,
-		len(game.Players), game.State, json)
+		len(game.Players), game.State, json, game.Public, game.IgnoreTime, game.SighButton)
 
 }
 func (db *Database) AddPlayer(playerId string, gameId string) {
 	var nextIndex = db.GetNumPlayersInGame(gameId)
 	db.execQuery(`insert into game_players (game_id, player_id, player_index)
 			values (?, ?, ?)`, gameId, playerId, nextIndex)
+	db.execQuery(`update games set players=players+1 where id=?`, gameId)
 }
 
 func (db *Database) CreatePlayerIfNotExists(id string, name string) {
