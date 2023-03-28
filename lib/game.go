@@ -49,6 +49,7 @@ func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMod
 
 	// populate the Deck, Discard, and Piles
 	g.Table.Deck = make([]Card, maxCards, maxCards)
+	g.Table.Mode = gameMode
 	g.Table.PopulateDeck()
 	g.Table.Discard = make([]Card, 0, maxCards)
 	g.Table.Piles = make([]int, len(g.Table.Colors), len(g.Table.Colors))
@@ -56,7 +57,6 @@ func (g *Game) Initialize(public bool, ignoreTime bool, sighButton bool, gameMod
 	g.Table.BombsLeft = StartingBombs
 	g.Table.HintsLeft = StartingHints
 
-	g.Table.Mode = gameMode
 	g.Table.NumPlayers = 0
 
 	// set starting values
