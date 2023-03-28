@@ -43,17 +43,13 @@ type GamesList struct {
 type StatsMessage struct {
 	Players      map[string]PlayerStats
 	LastMoveTime int64
-	Stats        SlicedStatLog
+	Stats        [][]StatLog
 }
 
 type PlayerStats struct {
 	ID    string
 	Name  string
-	Stats SlicedStatLog
-}
-
-type SlicedStatLog struct {
-	ModesAndPlayers [][]StatLog
+	Stats [][]StatLog
 }
 
 type StatLog struct {
@@ -73,21 +69,16 @@ type StatLog struct {
 	Scores        []int
 }
 
-func CreateEmptySlicedStatLog() SlicedStatLog {
-	ssl := SlicedStatLog{}
-
-	//ssl.Modes = make([]StatLog, Modes+1, Modes+1)
-	//ssl.NumPlayers = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
-	ssl.ModesAndPlayers = make([][]StatLog, Modes+1, Modes+1)
+func CreateEmptyStatsArray() [][]StatLog {
+	stats := make([][]StatLog, Modes+1, Modes+1)
 
 	for i := 0; i <= Modes; i++ {
-		ssl.ModesAndPlayers[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
+		stats[i] = make([]StatLog, MaxPlayers+1, MaxPlayers+1)
 		for j := 0; j <= MaxPlayers; j++ {
-			ssl.ModesAndPlayers[i][j].Scores = make([]int, MaxScoreAllModes+1, MaxScoreAllModes+1)
+			stats[i][j].Scores = make([]int, MaxScoreAllModes+1, MaxScoreAllModes+1)
 		}
 	}
-
-	return ssl
+	return stats
 }
 
 func EncodeList(gl GamesList) (string, string) {
