@@ -77,7 +77,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			if !lib.GameStateIsFinished(game.State) {
 
 				playerList := ""
-				for player, _ := range game.Players {
+				for player := range game.Players {
 					playerList += game.Players[player].Name + ", "
 				}
 
@@ -95,7 +95,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			if game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public == true {
 
 				playerList := ""
-				for player, _ := range game.Players {
+				for player := range game.Players {
 					playerList += game.Players[player].Name + ", "
 				}
 

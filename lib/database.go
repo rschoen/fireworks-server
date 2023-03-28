@@ -263,7 +263,6 @@ func (db *Database) GetNumPlayersInGame(gameId string) int {
 	default:
 		log.Println("Error retrieving player indices.")
 		panic(err)
-		return -1
 	}
 }
 
