@@ -226,8 +226,8 @@ func (db *Database) AddPlayer(playerId string, gameId string) {
 	var nextIndex = db.GetNumPlayersInGame(gameId)
 
 	db.openTransaction()
-	db.execWithinTransaction(`insert into game_players (game_id, player_id, player_index)
-			values (?, ?, ?)`, gameId, playerId, nextIndex)
+	db.execWithinTransaction(`insert into game_players (game_id, player_id, player_index, last_move)
+			values (?, ?, ?, ?)`, gameId, playerId, nextIndex, "")
 	db.execWithinTransaction(`update games set players=players+1 where id=?`, gameId)
 	db.closeTransaction()
 }
