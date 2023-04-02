@@ -1,47 +1,95 @@
 package lib
 
-// game.go was getting big, so I separated some stuff into here
-
 import (
+	"log"
 	"math/rand"
 )
 
-func (g *Game) PopulateDeck() {
+type Table struct {
+	HintsLeft         int
+	BombsLeft         int
+	Deck              []Card
+	Discard           []Card
+	Piles             []int
+	PileCards         []Card
+	CardsLastModified []int
+	Colors            []string
+
+	CurrentPlayerIndex   int
+	Turn                 int
+	TurnsLeft            int
+	CardsLeft            int
+	HighestPossibleScore int
+	NumPlayers           int
+	Mode                 int
+}
+
+func (t *Table) Initialize(gameMode int) {
+	t.Mode = gameMode
+
+	// figure out how many cards are in the Deck
+	if gameMode == ModeNormal {
+		t.Colors = normalColors[:]
+	} else {
+		t.Colors = rainbowColors[:]
+	}
+
+	maxCards := t.MaxCards()
+	t.PopulateDeck(maxCards)
+	t.Discard = make([]Card, 0, maxCards)
+	t.Piles = make([]int, len(t.Colors))
+
+	t.BombsLeft = StartingBombs
+	t.HintsLeft = StartingHints
+
+	t.NumPlayers = 0
+	t.TurnsLeft = -1
+	t.Turn = 0
+}
+
+func (t *Table) PopulateDeck(maxCards int) {
+	t.Deck = make([]Card, maxCards)
 	i := 0
 	for number, count := range numbers {
-		for _, color := range g.Colors {
-			if (g.Mode == ModeHard || g.Mode == ModeRainbowLimited) && color == "rainbow" && count > 0 {
+		for _, color := range t.Colors {
+			if (t.Mode == ModeHard || t.Mode == ModeRainbowLimited) && color == ColorRainbow && count > 0 {
 				count = 1
 			}
 			for j := 0; j < count; j++ {
-				g.Deck[i].ID = i
-				g.Deck[i].Color = color
-				g.Deck[i].Number = number
+				t.Deck[i].ID = i
+				t.Deck[i].Color = color
+				t.Deck[i].Number = number
 				i++
 			}
 		}
 	}
+	if i != maxCards {
+		log.Fatal("Initialized incorrect number of cards. Self-destructing!!")
+	}
 }
 
-func (g *Game) DrawCard() Card {
-	index := rand.Intn(len(g.Deck))
-	card := g.Deck[index]
-	g.Deck = append(g.Deck[:index], g.Deck[index+1:]...)
+func (t *Table) DrawCard() Card {
+	if len(t.Deck) <= 0 {
+		log.Fatal("Attempting to draw card from empty deck!")
+	}
+	index := rand.Intn(len(t.Deck))
+	card := t.Deck[index]
+	t.Deck = append(t.Deck[:index], t.Deck[index+1:]...)
 	return card
 }
 
-func (g *Game) PlayCard(c Card) bool {
-	pile := g.CardPlayableOnPile(c)
+func (t *Table) PlayCard(c Card) bool {
+	pile := t.CardPlayableOnPile(c)
 	if pile > -1 {
-		g.Piles[pile]++
-		g.PileCards = append(g.PileCards, c)
+		t.Piles[pile]++
+		t.PileCards = append(t.PileCards, c)
 		return true
 	}
 	return false
 }
 
-func (g *Game) PilesComplete() bool {
-	for _, count := range g.Piles {
+func (t *Table) ArePilesComplete() bool {
+	for _, count := range t.Piles {
 		if count != len(numbers)-1 {
 			return false
 		}
@@ -49,18 +97,18 @@ func (g *Game) PilesComplete() bool {
 	return true
 }
 
-func (g *Game) Score() int {
+func (t *Table) Score() int {
 	score := 0
-	for _, count := range g.Piles {
+	for _, count := range t.Piles {
 		score += count
 	}
 	return score
 }
 
 // returns pile index if playable, -1 if not
-func (g *Game) CardPlayableOnCustomPile(c Card, p []int) int {
+func (t *Table) CardPlayableOnCustomPile(c Card, p []int) int {
 	for index, count := range p {
-		if g.Colors[index] == c.Color {
+		if t.Colors[index] == c.Color {
 			if count+1 == c.Number {
 				return index
 			} else {
@@ -71,84 +119,19 @@ func (g *Game) CardPlayableOnCustomPile(c Card, p []int) int {
 	return -1
 }
 
-func (g *Game) CardPlayableOnPile(c Card) int {
-	return g.CardPlayableOnCustomPile(c, g.Piles)
+func (t *Table) CardPlayableOnPile(c Card) int {
+	return t.CardPlayableOnCustomPile(c, t.Piles)
 }
 
-func (g *Game) AnyPlayableCards() bool {
-	if g.Turn < 15 {
-		// not possible for there to be no playable cards yet
-		return true
-	}
-
-	for i, _ := range g.Players {
-		if g.TurnsLeft != -1 && i >= g.TurnsLeft {
-			break
-		}
-		p := g.Players[(i+g.CurrentPlayerIndex)%len(g.Players)]
-		for _, c := range p.Cards {
-			if g.CardPlayableOnPile(c) > -1 {
-				return true
-			}
-		}
-	}
-
-	for _, c := range g.Deck {
-		if g.CardPlayableOnPile(c) > -1 {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (g *Game) MaxCards() int {
+func (t *Table) MaxCards() int {
 	maxCards := 0
 	for _, count := range numbers {
-		maxCards += count * len(g.Colors)
+		maxCards += count * len(t.Colors)
 	}
-	if g.Mode == ModeHard || g.Mode == ModeRainbowLimited {
+	if t.Mode == ModeHard || t.Mode == ModeRainbowLimited {
 		maxCards -= 5
 	}
 	return maxCards
-}
-
-func (g *Game) GetHighestPossibleScore() int {
-	score := g.Score()
-	cards := make([]Card, 0, g.MaxCards())
-	cards = append(cards, g.Deck...)
-	for _, player := range g.Players {
-		cards = append(cards, player.Cards...)
-	}
-
-	piles := make([]int, len(g.Piles), len(g.Piles))
-	for i, value := range g.Piles {
-		piles[i] = value
-	}
-
-	turnsLeft := len(g.Deck) + len(g.Players)
-	if g.TurnsLeft > -1 && turnsLeft > g.TurnsLeft {
-		turnsLeft = g.TurnsLeft
-	}
-
-MainLoop:
-	for turnsLeft > 0 {
-		for _, c := range cards {
-			pile := g.CardPlayableOnCustomPile(c, piles)
-			if pile > -1 {
-				piles[pile]++
-				score++
-				turnsLeft--
-				if turnsLeft == 0 {
-					break MainLoop
-				}
-				continue MainLoop
-			}
-		}
-		break
-	}
-
-	return score
 }
 
 func PerfectScoreForMode(mode int) int {

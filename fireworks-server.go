@@ -19,14 +19,9 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	// allow requests to come from anywhere, since clients can be wherever
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	//decide which API we're using, depending on what's requested and what's turned on
-	var apiPrefix string
-	usingV2Api := false
-	if s.v1Api && len(r.URL.Path) >= len(lib.V1ApiPrefix) && r.URL.Path[1:len(lib.V1ApiPrefix)+1] == lib.V1ApiPrefix {
-		apiPrefix = lib.V1ApiPrefix
-	} else if s.v2Api && len(r.URL.Path) >= len(lib.V2ApiPrefix) && r.URL.Path[1:len(lib.V2ApiPrefix)+1] == lib.V2ApiPrefix {
-		apiPrefix = lib.V2ApiPrefix
-		usingV2Api = true
+	apiPrefix := "/apiv2/"
+	if len(r.URL.Path) >= len(apiPrefix) && r.URL.Path[:len(apiPrefix)] == apiPrefix {
+		// nothing
 	} else if s.fileServer {
 		// serve client HTTP responses, if it's turned on
 		http.FileServer(http.Dir(s.clientDirectory)).ServeHTTP(w, r)
@@ -35,203 +30,216 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var command = r.URL.Path[len(apiPrefix)+1:]
+	var command = r.URL.Path[len(apiPrefix):]
 	if command == "version" {
 		fmt.Fprintf(w, lib.VERSION)
 		return
 	}
 	if command == "stats" {
-		var statsLog lib.Logger
-		if usingV2Api {
-			statsLog = s.db.CreateStatsLog()
-		} else {
-			statsLog = s.logger.CreateStatsLog()
-		}
 
-		json, err := lib.EncodeStatsLog(statsLog)
+		statsLog := s.db.CreateStatsMessage()
+
+		json, err := lib.EncodeStatsMessage(statsLog)
 		if err != "" {
 			log.Printf("Failed to encode stats log. Error: %s\n", err)
 			return
 		}
-		fmt.Fprintf(w, json)
+		fmt.Fprint(w, json)
+		return
+	}
+	if command == "clean" {
+		s.db.CleanupUnstartedGames()
+		fmt.Fprint(w, "")
 		return
 	}
 
 	m, err := lib.DecodeMove(r.PostFormValue("data"))
 	if err != "" {
 		log.Println("Discarding malformed JSON message. Error: " + err)
-		fmt.Fprintf(w, jsonError("Data sent was malformed."))
+		fmt.Fprint(w, jsonError("Data sent was malformed."))
 		return
 	}
-	var game *lib.Game
-	for _, ongoingGame := range s.games {
-		if ongoingGame.ID == m.Game {
-			game = ongoingGame
-		}
-	}
+	var selectedGame *lib.Game
 
 	// Authenticate user
 	authResponse, authError := s.auth.Authenticate(m.Token)
 	if authError != "" {
 		log.Printf("Failed to authenticate player '%s' in game '%s'. Error: %s\n", m.Player, m.Game, authError)
-		fmt.Fprintf(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
+		fmt.Fprint(w, jsonError("You appear to be signed out. Please refresh and try signing in again."))
 		return
 	}
-	if authResponse.GetGoogleID() != m.Player {
+	if authResponse.GetGoogleID() != m.Player && !s.disableAuth {
 		log.Printf("Authenticated player '%s' submitted move as player '%s' in game '%s'.", authResponse.GetGoogleID(), m.Player, m.Game)
-		fmt.Fprintf(w, jsonError("Authenticated as a different user."))
+		fmt.Fprint(w, jsonError("Authenticated as a different user."))
 		return
 	}
 
 	if command == "list" {
 		list := lib.GamesList{}
-		for i, _ := range s.games {
-			state := s.games[i].State
-			if state != lib.StateNotStarted && state != lib.StateStarted {
-				continue
-			}
+		playersGames := s.db.GetGamesPlayerIsIn(m.Player)
+		for _, gameId := range playersGames {
+			game := s.games[gameId]
+			if !lib.GameStateIsFinished(game.State) {
 
-			playerList := ""
-			addGame := false
-			for player, _ := range s.games[i].Players {
-				playerList += s.games[i].Players[player].Name + ", "
-				if s.games[i].Players[player].GoogleID == m.Player {
-					addGame = true
+				playerList := ""
+				for player := range game.Players {
+					playerList += game.Players[player].Name + ", "
 				}
-			}
-			if playerList != "" {
-				playerList = playerList[:len(playerList)-2]
-			}
-			game := lib.MinimalGame{ID: s.games[i].ID, Name: s.games[i].Name, Players: playerList, Mode: s.games[i].Mode}
 
-			if addGame {
-				list.PlayersGames = append(list.PlayersGames, game)
-			} else if state == lib.StateNotStarted && len(s.games[i].Players) < lib.MaxPlayers && s.games[i].Public == true {
-				list.OpenGames = append(list.OpenGames, game)
+				if playerList != "" {
+					playerList = playerList[:len(playerList)-2]
+				}
+				gameMessage := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+				list.PlayersGames = append(list.PlayersGames, gameMessage)
+			}
+		}
+
+		joinableGames := s.db.GetJoinableGames()
+		for _, gameId := range joinableGames {
+			game := s.games[gameId]
+			if game.State == lib.StateNotStarted && len(game.Players) < lib.MaxPlayers && game.Public {
+
+				playerList := ""
+				for player := range game.Players {
+					playerList += game.Players[player].Name + ", "
+				}
+
+				if playerList != "" {
+					playerList = playerList[:len(playerList)-2]
+				}
+				gameMessage := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+				list.OpenGames = append(list.OpenGames, gameMessage)
 			}
 		}
 
 		encodedList, err := lib.EncodeList(list)
 		if err != "" {
 			log.Printf("Failed to encode game list. Error: %s\n", err)
-			fmt.Fprintf(w, jsonError("Could not transmit game list to client."))
+			fmt.Fprint(w, jsonError("Could not transmit game list to client."))
 			return
 		}
-		fmt.Fprintf(w, encodedList)
+		fmt.Fprint(w, encodedList)
 		return
 	}
 
 	if command == "create" {
-		game = new(lib.Game)
-		game.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
-		game.ID = game.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
+		selectedGame = new(lib.Game)
+		selectedGame.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
+		selectedGame.ID = selectedGame.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
 
-		var initializationError = game.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode, m.StartingHints, m.MaxHints, m.StartingBombs)
+		var initializationError = selectedGame.Initialize(m.Public, m.IgnoreTime, m.SighButton, m.GameMode)
 		if initializationError != "" {
 			log.Printf("Failed to initialize game '%s'. Error: %s\n", m.Game, initializationError)
-			fmt.Fprintf(w, jsonError("Could not initialize game."))
+			fmt.Fprint(w, jsonError("Could not initialize game."))
 			return
 		}
-		s.games = append(s.games, game)
+		s.db.CreateGame(*selectedGame)
+		s.games[selectedGame.ID] = selectedGame
+		m.Game = selectedGame.ID
 		log.Printf("Created new game '%s'\n", m.Game)
 
 		command = "join"
 	}
 
-	if game == nil {
+	if _, ok := s.games[m.Game]; ok {
+		selectedGame = s.games[m.Game]
+	} else {
 		log.Printf("Attempting to make a move on a nonexistent game '%s'\n", m.Game)
-		fmt.Fprintf(w, jsonError("The game you're attempting to play no longer exists."))
+		fmt.Fprint(w, jsonError("The game you're attempting to play no longer exists."))
 		return
 	}
 
 	if command == "join" {
-		player := game.GetPlayerByGoogleID(m.Player)
+		player := selectedGame.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
-			if len(game.Players) >= lib.MaxPlayers {
+			log.Printf("Player not in game already, adding now!")
+			if len(selectedGame.Players) >= lib.MaxPlayers {
 				log.Printf("Attempting to add player '%s' to full game '%s'\n", m.Player, m.Game)
-				fmt.Fprintf(w, jsonError("This game is now full."))
+				fmt.Fprint(w, jsonError("This game is now full."))
 				return
 			}
 			playerName := sanitizeAndTrim(authResponse.GetGivenName(), lib.MaxPlayerNameLength, true)
-			addError := game.AddPlayer(m.Player, playerName)
+			addError := selectedGame.AddPlayer(m.Player, playerName)
+			s.db.CreatePlayerIfNotExists(m.Player, playerName)
+			s.db.AddPlayer(m.Player, selectedGame.ID)
 			if addError != "" {
 				log.Printf("Error adding player '%s' to game '%s'. Error: %s\n", m.Player, m.Game, addError)
-				fmt.Fprintf(w, jsonError("Unable to join this game."))
+				fmt.Fprint(w, jsonError("Unable to join this game."))
 				return
 			}
-			log.Printf("Added player '%s' to game '%s'\n", playerName, game.Name)
+			log.Printf("Added player '%s' to game '%s'\n", playerName, selectedGame.Name)
 		}
 	}
 
-	player := game.GetPlayerByGoogleID(m.Player)
+	player := selectedGame.GetPlayerByGoogleID(m.Player)
 
 	if player == nil {
 		log.Printf("Attempting to make a move with nonexistent player '%s'\n", m.Player)
-		fmt.Fprintf(w, jsonError("You're not a member of this game."))
+		fmt.Fprint(w, jsonError("You're not a member of this game."))
 		return
 	}
 
 	if command == "start" {
-		if game.State != lib.StateNotStarted {
+		if selectedGame.State != lib.StateNotStarted {
 			log.Printf("Attempting to start already started game '%s'\n", m.Game)
-			fmt.Fprintf(w, jsonError("This game has already started."))
+			fmt.Fprint(w, jsonError("This game has already started."))
 			return
 		}
-		var startError = game.Start()
+		log.Printf("Gonna start game %s with table %+v", selectedGame.ID, selectedGame.Table)
+		var startError = selectedGame.Start()
 		if startError != "" {
 			log.Printf("Failed to start game '%s'. Error: %s\n", m.Game, startError)
-			fmt.Fprintf(w, jsonError("Could not start game."))
+			fmt.Fprint(w, jsonError("Could not start game."))
 			return
 		}
+		s.db.SaveGameToDatabase(selectedGame)
 		log.Printf("Started game '%s'\n", m.Game)
 	}
 
 	if command == "announce" {
-		var processError = game.ProcessAnnouncement(&m)
+		var processError = selectedGame.ProcessAnnouncement(&m)
 		if processError != "" {
 			log.Printf("Failed to process announcement for game '%s'. Error: %s\n", m.Game, processError)
-			fmt.Fprintf(w, jsonError("Could not process announcement."))
+			fmt.Fprint(w, jsonError("Could not process announcement."))
 			return
 		}
 		log.Printf("Processed announcement by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
 	if command == "move" {
-		if m.MoveType == lib.MoveHint && game.Hints <= 0 {
-			fmt.Fprintf(w, jsonError("There are no hints left. Discard to earn more hints."))
-			return
-		}
-		var processError = game.ProcessMove(&m)
+
+		var processError = selectedGame.ProcessMove(&m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
-			fmt.Fprintf(w, jsonError("Could not process move."))
+			fmt.Fprint(w, jsonError("Could not process move."))
 			return
 		}
-		logError := s.logger.LogMove(*game, m, time.Now().Unix(), true)
+		logError := s.db.LogMove(*selectedGame, m, time.Now().Unix())
 		if logError != "" {
 			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
-			fmt.Fprintf(w, jsonError("Could not log move."))
+			fmt.Fprint(w, jsonError("Could not log move."))
 			return
 		}
+		s.db.SaveGameToDatabase(selectedGame)
 		player.PushToken = m.PushToken
 		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
 	}
 
 	if command == "status" {
-		if m.LastTurn == game.Turn && m.UpdateTime == game.UpdateTime {
-			fmt.Fprintf(w, "")
+		if m.LastTurn == selectedGame.Table.Turn && m.UpdateTime == selectedGame.LastUpdateTime {
+			fmt.Fprint(w, "")
 			return
 		}
 	}
 
-	encodedGame, err := lib.EncodeGame(game.CreateState(m.Player))
+	encodedGame, err := lib.EncodeGame(selectedGame.CreateState(m.Player))
 	if err != "" {
 		log.Printf("Failed to encode game '%s'. Error: %s\n", m.Game, err)
-		fmt.Fprintf(w, jsonError("Could not transmit game state to client."))
+		fmt.Fprint(w, jsonError("Could not transmit game state to client."))
 		return
 	}
-	fmt.Fprintf(w, encodedGame)
+	fmt.Fprint(w, encodedGame)
 }
 
 func jsonError(err string) string {
@@ -239,9 +247,9 @@ func jsonError(err string) string {
 }
 
 func sanitizeAndTrim(text string, limit int, oneword bool) string {
-	re := regexp.MustCompile("[^A-Za-z0-9 _!,\\.-]+")
+	re := regexp.MustCompile(`[^A-Za-z0-9 _!,\.-]+`)
 	text = re.ReplaceAllString(text, "")
-	if oneword && strings.Index(text, " ") > -1 {
+	if oneword && strings.Contains(text, " ") {
 		text = text[:strings.Index(text, " ")]
 	}
 	if len(text) > limit {
@@ -251,14 +259,12 @@ func sanitizeAndTrim(text string, limit int, oneword bool) string {
 }
 
 type Server struct {
-	games           []*lib.Game
-	logger          *lib.Logger
+	games           map[string]*lib.Game
 	db              *lib.Database
 	fileServer      bool
-	clientDirectory string
 	auth            lib.Authenticator
-	v1Api           bool
-	v2Api           bool
+	disableAuth     bool
+	clientDirectory string
 }
 
 func main() {
@@ -266,8 +272,7 @@ func main() {
 
 	// initialize server
 	s := Server{}
-	s.games = make([]*lib.Game, 0, lib.MaxConcurrentGames)
-	s.auth.Initialize()
+	s.games = make(map[string]*lib.Game)
 
 	fileServer := flag.Bool("file-server", false, "Whether to serve files in addition to game API.")
 	https := flag.Bool("https", false, "Whether to serve everything over HTTPS instead of HTTP")
@@ -275,12 +280,9 @@ func main() {
 	port := flag.Int("port", lib.DefaultPort, "Port to listen for connections from client.")
 	cert := flag.String("certificate", lib.DefaultCertificate, "Path to SSL certificate file, only used if using --http")
 	key := flag.String("key", lib.DefaultKey, "Path to SSL key file, only used if using --http")
-	logDir := flag.String("logdir", lib.DefaultLogDirectory, "Path to log directory, defaults to ./log/")
+	databaseFile := flag.String("database", lib.DefaultDatabaseFile, "File to use as database, defaults to "+lib.DefaultDatabaseFile)
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
-	regenStats := flag.Bool("regenerate-stats", false, "Whether to completely regenerate game statistics")
-	enableV1Api := flag.Bool("enable-v1-api", true, "Whether turn on v1 (legacy) API endpoint")
-	enableV2Api := flag.Bool("enable-v2-api", false, "Whether turn on v2 (next-gen) API endpoint")
-	migrate := flag.Bool("migrate", false, "Run the conversion from JSON database to Sqlite")
+	disableAuth := flag.Bool("disable-auth", false, "Disable authentication for testing")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -292,39 +294,20 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 
+	s.disableAuth = *disableAuth
+	s.auth.Initialize(*disableAuth)
+
 	s.fileServer = *fileServer
 	s.clientDirectory = *clientDirectory
 	http.HandleFunc("/", s.handler)
 	portString := ":" + strconv.Itoa(*port)
 
-	s.v1Api = *enableV1Api
-	s.v2Api = *enableV2Api
+	log.Println("Loading database...")
+	s.db = new(lib.Database)
+	s.db.Connect(*databaseFile)
+	s.games = s.db.GetActiveGames()
 
-	// set up the logger and reconsitute games in progress
-	s.logger = new(lib.Logger)
-	s.logger.Directory = *logDir
-	fmt.Println("Re-constituting games in progress.")
-	games, loggerError := s.logger.Initialize(*regenStats)
-	if loggerError != "" {
-		log.Fatal("Failed to initialize logger. Error: " + loggerError)
-	}
-	s.games = append(s.games, games...)
-	fmt.Printf("Re-constituted %d games.\n", len(games))
-
-	if *migrate {
-		log.Println("Migrating database...")
-		success := lib.MigrateToSqlite(s.logger)
-		if success {
-			log.Println("Migration complete.")
-		} else {
-			log.Fatal("Migration failed.")
-		}
-	}
-
-	if *enableV2Api {
-		s.db = new(lib.Database)
-		s.db.Connect()
-	}
+	log.Println("Ready to go!")
 
 	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))

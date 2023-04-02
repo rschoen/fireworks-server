@@ -17,7 +17,8 @@ type AuthResponse struct {
 }
 
 type Authenticator struct {
-	Cache map[string]AuthResponse
+	Cache       map[string]AuthResponse
+	disableAuth bool
 }
 
 func (r *AuthResponse) GetGoogleID() string {
@@ -33,11 +34,16 @@ func (r *AuthResponse) HasExpired(buffer int64) bool {
 	return int64(expiration)+buffer < time.Now().Unix()
 }
 
-func (a *Authenticator) Initialize() {
+func (a *Authenticator) Initialize(disable bool) {
 	a.Cache = make(map[string]AuthResponse)
+	a.disableAuth = disable
 }
 
 func (a *Authenticator) Authenticate(token string) (AuthResponse, string) {
+	if a.disableAuth {
+		return AuthResponse{Iss: "my_iss", Sub: "my_sub", Aud: "my_aud", Exp: "my_exp", Given_name: "Ryan test"}, ""
+	}
+
 	if token == "" {
 		return AuthResponse{}, "Trying to authenticate empty token."
 	}
