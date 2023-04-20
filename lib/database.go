@@ -325,11 +325,6 @@ func (db *Database) LogMove(g Game, m Message, t int64) string {
 	db.execWithinTransaction("update games set "+gameSql[:len(gameSql)-2]+" where id=?", g.ID)
 	db.closeTransaction()
 
-	g.LastUpdateTime = t
-	if t > db.LastUpdateTime {
-		db.LastUpdateTime = t
-	}
-
 	return ""
 }
 

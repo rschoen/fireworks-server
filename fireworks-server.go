@@ -215,7 +215,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, jsonError("Could not process move."))
 			return
 		}
-		logError := s.db.LogMove(*selectedGame, m, time.Now().Unix())
+		t := time.Now().Unix()
+
+		logError := s.db.LogMove(*selectedGame, m, t)
+		selectedGame.LastUpdateTime = t
+		if t > s.db.LastUpdateTime {
+			s.db.LastUpdateTime = t
+		}
+
 		if logError != "" {
 			log.Printf("Failed to log move for game '%s'. Error: %s\n", m.Game, logError)
 			fmt.Fprint(w, jsonError("Could not log move."))
