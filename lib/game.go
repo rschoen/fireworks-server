@@ -24,7 +24,6 @@ type Game struct {
 	Mode           int
 	CurrentScore   int
 	Table          *Table
-	Score          int
 
 	Stats StatLog
 }

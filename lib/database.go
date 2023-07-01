@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -13,6 +14,7 @@ type Database struct {
 	dbRef          *sql.DB
 	LastUpdateTime int64
 	tx             *sql.Tx
+	m              sync.Mutex
 }
 
 func (db *Database) Connect(dbFile string) {
@@ -26,6 +28,8 @@ func (db *Database) Connect(dbFile string) {
 }
 
 func (db *Database) openTransaction() {
+	db.m.Lock()
+	log.Print("MUTEX LOCKED")
 	if db.tx != nil {
 		log.Fatal("Attempting to open a transaction when one is already open. Quitting.")
 	}
@@ -61,6 +65,7 @@ func (db *Database) execWithinTransaction(query string, args ...interface{}) {
 }
 
 func (db *Database) closeTransaction() {
+	log.Print("Attempting to close transaction...")
 	if db.tx == nil {
 		log.Fatal("Attempting to close transaction without an open transaction. Quitting")
 	}
@@ -71,6 +76,8 @@ func (db *Database) closeTransaction() {
 	}
 	db.tx = nil
 	log.Print("TRANSACTION CLOSED")
+	db.m.Unlock()
+	log.Print("MUTEX UNLOCKED")
 }
 
 func (db *Database) GetGamesPlayerIsIn(player string) []string {
@@ -160,7 +167,7 @@ func (db *Database) LookupGameById(id string) *Game {
 		game.Public = public
 		game.IgnoreTime = ignoreTime
 		game.SighButton = sighButton
-		game.Score = score
+		game.CurrentScore = score
 
 		game.Stats = StatLog{}
 		game.Stats.Turns = int64(turns)
@@ -197,7 +204,7 @@ func (db *Database) SaveGameToDatabase(game *Game) {
 
 	db.execWithinTransaction(`update games set state=?, last_move_time=?,
 		score=?, players=?, table_state=?, time_started=? where id=?`,
-		game.State, game.LastUpdateTime, game.Score, len(game.Players), json, game.StartTime, game.ID)
+		game.State, game.LastUpdateTime, game.CurrentScore, len(game.Players), json, game.StartTime, game.ID)
 
 	for _, player := range game.Players {
 		cardJson, cardError := EncodePlayerHand(player)
