@@ -123,6 +123,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "create" {
+		log.Printf("Creating a new game.")
 		selectedGame = new(lib.Game)
 		selectedGame.Name = sanitizeAndTrim(m.Game, lib.MaxGameNameLength, false)
 		selectedGame.ID = selectedGame.Name + "-" + strconv.FormatInt(time.Now().Unix(), 10)
@@ -150,6 +151,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "join" {
+		log.Printf("Joining a game.")
 		player := selectedGame.GetPlayerByGoogleID(m.Player)
 		// add player if it doesn't exist
 		if player == nil {
@@ -181,6 +183,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "start" {
+		log.Printf("Starting a game.")
 		if selectedGame.State != lib.StateNotStarted {
 			log.Printf("Attempting to start already started game '%s'\n", m.Game)
 			fmt.Fprint(w, jsonError("This game has already started."))
@@ -198,6 +201,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if command == "announce" {
+		log.Printf("Making an announcement.")
 		var processError = selectedGame.ProcessAnnouncement(&m)
 		if processError != "" {
 			log.Printf("Failed to process announcement for game '%s'. Error: %s\n", m.Game, processError)
@@ -209,6 +213,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 
 	if command == "move" {
 
+		log.Printf("Making a move by player %s.", player.Name)
 		var processError = selectedGame.ProcessMove(&m)
 		if processError != "" {
 			log.Printf("Failed to process move for game '%s'. Error: %s\n", m.Game, processError)
@@ -217,6 +222,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 		}
 		t := time.Now().Unix()
 
+		log.Printf("Logging the move...")
 		logError := s.db.LogMove(*selectedGame, m, t)
 		selectedGame.LastUpdateTime = t
 		if t > s.db.LastUpdateTime {
@@ -228,6 +234,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, jsonError("Could not log move."))
 			return
 		}
+		log.Printf("Saving game to database.")
 		s.db.SaveGameToDatabase(selectedGame)
 		player.PushToken = m.PushToken
 		log.Printf("Processed and logged move by player '%s' in game '%s'\n", m.Player, m.Game)
