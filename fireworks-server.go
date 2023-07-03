@@ -297,6 +297,7 @@ func main() {
 	databaseFile := flag.String("database", lib.DefaultDatabaseFile, "File to use as database, defaults to "+lib.DefaultDatabaseFile)
 	cpuprofile := flag.String("cpuprofile", "", "write cpu profile to file")
 	disableAuth := flag.Bool("disable-auth", false, "Disable authentication for testing")
+	repairScore := flag.Bool("repair-score", false, "One-time repair of 0 scores")
 	flag.Parse()
 
 	if *cpuprofile != "" {
@@ -322,6 +323,11 @@ func main() {
 	s.games = s.db.GetActiveGames()
 
 	log.Println("Ready to go!")
+
+	if *repairScore {
+		s.db.RepairZeroScoreGames()
+		return
+	}
 
 	if *https {
 		log.Fatal(http.ListenAndServeTLS(portString, *cert, *key, nil))

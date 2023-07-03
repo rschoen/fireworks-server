@@ -75,10 +75,14 @@ func CreateEmptyStatsArray() [][]StatLog {
 	for i := 0; i <= Modes; i++ {
 		stats[i] = make([]StatLog, MaxPlayers+1)
 		for j := 0; j <= MaxPlayers; j++ {
-			stats[i][j].Scores = make([]int, MaxScoreAllModes+1)
+			stats[i][j].Scores = CreateSingleStatsArray()
 		}
 	}
 	return stats
+}
+
+func CreateSingleStatsArray() []int {
+	return make([]int, MaxScoreAllModes+1)
 }
 
 func EncodeList(gl GamesList) (string, string) {

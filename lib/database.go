@@ -138,6 +138,29 @@ func (db *Database) GetActiveGames() map[string]*Game {
 	return games
 }
 
+func (db *Database) RepairZeroScoreGames() {
+	rows, err := db.dbRef.Query(`select id from games where score == 0`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	var games = make(map[string]*Game)
+	var id string
+	for rows.Next() {
+		err = rows.Scan(&id)
+		if err != nil {
+			log.Fatal(err)
+		}
+		games[id] = db.LookupGameById(id)
+	}
+
+	for gameid, game := range games {
+		db.execQuery("update games set score=? where id=?", game.Table.Score(), gameid)
+	}
+
+}
+
 func (db *Database) LookupGameById(id string) *Game {
 	row := db.dbRef.QueryRow(`select name,
 		state, time_started, last_move_time, turns, timed_turns,

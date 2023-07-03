@@ -200,6 +200,10 @@ func (db *Database) CreateStatsMessage() StatsMessage {
 }
 
 func scoreListFromString(scoreString string) []int {
+	if len(scoreString) <= 2 {
+		return CreateSingleStatsArray()
+	}
+
 	scores := strings.Split(scoreString[1:len(scoreString)-1], " ")
 	scoreList := make([]int, len(scores))
 	var err error
