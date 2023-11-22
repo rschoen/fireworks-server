@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fireworks-server/lib"
+	"github.com/rschoen/fireworks-server/lib"
 	"flag"
 	"fmt"
 	"log"
