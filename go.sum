@@ -1,0 +1,4 @@
+github.com/NaySoftware/go-fcm v0.0.0-20190516140123-808e978ddcd2 h1:0hjpEzUWez7uca/CUBhfidfotTCCI5fsj6Nb+TW5DLg=
+github.com/NaySoftware/go-fcm v0.0.0-20190516140123-808e978ddcd2/go.mod h1:3qVrdgWvoMZMoRG+/nusrCNrcP4RYU4MWGv467XjqLI=
+github.com/mattn/go-sqlite3 v1.14.18 h1:JL0eqdCOq6DJVNPSvArO/bIV9/P7fbGrV00LZHc+5aI=
+github.com/mattn/go-sqlite3 v1.14.18/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
