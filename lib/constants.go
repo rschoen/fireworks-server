@@ -1,6 +1,6 @@
 package lib
 
-const VERSION = "1.0.7"
+const VERSION = "2.0.1"
 
 const HintNumber = 1
 const HintColor = 2

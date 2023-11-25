@@ -29,10 +29,11 @@ type Message struct {
 }
 
 type MinimalGame struct {
-	ID      string
-	Name    string
-	Players string
-	Mode    int
+	ID           string
+	Name         string
+	Players      string
+	Mode         int
+	IsDeleteable bool
 }
 
 type GamesList struct {

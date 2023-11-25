@@ -381,3 +381,10 @@ func (db *Database) CleanupUnstartedGames() {
 	db.execWithinTransaction(`delete from game_players where game_id in (select game_id from game_players left join games on game_id=id where id is null)`)
 	db.closeTransaction()
 }
+
+func (db *Database) DeleteGame(gameid string) {
+	db.openTransaction()
+	db.execWithinTransaction(`delete from games where id=?`, gameid)
+	db.execWithinTransaction(`delete from game_players where game_id=?`, gameid)
+	db.closeTransaction()
+}

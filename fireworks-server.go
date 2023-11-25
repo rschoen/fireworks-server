@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/rschoen/fireworks-server/lib"
 	"flag"
 	"fmt"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rschoen/fireworks-server/lib"
 )
 
 func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
@@ -89,7 +90,7 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 				if playerList != "" {
 					playerList = playerList[:len(playerList)-2]
 				}
-				gameMessage := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode}
+				gameMessage := lib.MinimalGame{ID: game.ID, Name: game.Name, Players: playerList, Mode: game.Mode, IsDeleteable: game.IsDeleteable()}
 				list.PlayersGames = append(list.PlayersGames, gameMessage)
 			}
 		}
@@ -172,6 +173,14 @@ func (s *Server) handler(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Printf("Added player '%s' to game '%s'\n", playerName, selectedGame.Name)
 		}
+	}
+
+	if command == "delete" {
+		log.Printf("Attempting to delete a game.")
+		if selectedGame.IsDeleteable() {
+			s.db.DeleteGame(selectedGame.ID)
+		}
+		return
 	}
 
 	player := selectedGame.GetPlayerByGoogleID(m.Player)

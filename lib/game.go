@@ -106,7 +106,7 @@ func (g *Game) Start() string {
 	return ""
 }
 
-//Wrapper in case we ever need a global time stamp to coordinate amongst distributed servers
+// Wrapper in case we ever need a global time stamp to coordinate amongst distributed servers
 func getCurrentTime() int64 {
 	return time.Now().Unix()
 }
@@ -405,4 +405,11 @@ MainLoop:
 	}
 
 	return score
+}
+
+func (g *Game) IsDeleteable() bool {
+	if g.State == StateNotStarted {
+		return true
+	}
+	return g.Table.Turn <= g.Table.NumPlayers*2
 }

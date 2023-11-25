@@ -1,3 +1,5 @@
 lib/secrets.go
 fireworks-server
 fireworks-server-*
+dev.log
+prod.log
