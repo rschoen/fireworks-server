@@ -3,3 +3,4 @@ fireworks-server
 fireworks-server-*
 dev.log
 prod.log
+*.db

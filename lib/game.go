@@ -1,13 +1,16 @@
 package lib
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/rand"
 	"strconv"
 	"time"
 
-	"github.com/NaySoftware/go-fcm"
+	firebase "firebase.google.com/go"
+	"firebase.google.com/go/messaging"
+	"google.golang.org/api/option"
 )
 
 type Game struct {
@@ -308,30 +311,36 @@ func (g *Game) GetPlayerByGoogleID(id string) *Player {
 
 func (g *Game) SendCurrentPlayerNotification() {
 	token := g.GetPlayerByGoogleID(g.Players[g.Table.CurrentPlayerIndex].GoogleID).PushToken
+	fmt.Printf("Sending notification to token %s", token)
 	if token == "" {
 		return
 	}
 
-	data := map[string]string{
-		"msg": "Other players are waiting! Take your turn.",
-		"sum": "Fireworks - it's your turn!",
+	opts := []option.ClientOption{option.WithCredentialsJSON([]byte(WebPushKey))}
+	app, firebaseErr := firebase.NewApp(context.Background(), nil, opts...)
+	if firebaseErr != nil {
+		fmt.Printf("Error in initializing firebase : %s", firebaseErr.Error())
+		return
 	}
 
-	c := fcm.NewFcmClient(PushServerKey)
-	c.NewFcmRegIdsMsg([]string{token}, data)
+	fcmClient, messagingErr := app.Messaging(context.Background())
 
-	n := fcm.NotificationPayload{}
-	n.Title = "Fireworks - it's your turn!"
-	n.Body = "Other players are waiting! Take your turn."
-	n.ClickAction = "https://ryanschoen.com/fireworks/#!/games/" + g.ID
-	n.Icon = "https://ryanschoen.com/fireworks/images/icons/fireworks128.png"
-	c.SetNotificationPayload(&n)
-
-	_, err := c.Send()
-
-	if err != nil {
-		fmt.Println(err)
+	if messagingErr != nil {
+		fmt.Printf("Error in initializing messaging : %s", messagingErr.Error())
+		return
 	}
+
+	response, sendErr := fcmClient.Send(context.Background(), &messaging.Message{
+		Data:  map[string]string{"game": g.ID},
+		Token: token,
+	})
+
+	if sendErr != nil {
+		fmt.Printf("Error in initializing messaging : %s", sendErr.Error())
+	}
+
+	fmt.Printf("%#v\n", response)
+
 }
 
 func (g *Game) GetPlayerListAsString() string {
